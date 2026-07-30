@@ -2,6 +2,7 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
+
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1.0"
@@ -10,6 +11,7 @@
     <title>ARスタンプラリー</title>
 
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
   </head>
 
@@ -26,7 +28,10 @@
         look-controls="enabled: false"
       ></a-camera>
 
-      <a-entity mindar-image-target="targetIndex: 0">
+      <a-entity
+        id="ar-target"
+        mindar-image-target="targetIndex: 0"
+      >
         <a-plane
           color="blue"
           opacity="0.5"
@@ -37,6 +42,65 @@
       </a-entity>
     </a-scene>
 
-    <script type="module" src="/src/main.js"></script>
+    <!-- キャラクターが話しているように見せるクイズ画面 -->
+    <div
+      id="quiz-modal"
+      class="quiz-modal"
+      aria-hidden="true"
+    >
+      <div class="quiz-card">
+        <div class="speech-triangle"></div>
+        <h1 id="quiz-question">
+          島根県の県庁所在地はどこでしょう？
+        </h1>
+
+        <div
+          id="quiz-options"
+          class="quiz-options"
+        >
+          <button
+            class="quiz-option"
+            type="button"
+            data-answer="出雲市"
+          >
+            出雲市
+          </button>
+
+          <button
+            class="quiz-option"
+            type="button"
+            data-answer="松江市"
+          >
+            松江市
+          </button>
+
+          <button
+            class="quiz-option"
+            type="button"
+            data-answer="浜田市"
+          >
+            浜田市
+          </button>
+        </div>
+
+        <p
+          id="quiz-result"
+          class="quiz-result"
+        ></p>
+
+        <button
+          id="quiz-close-button"
+          class="quiz-close-button"
+          type="button"
+        >
+          閉じる
+        </button>
+      </div>
+    </div>
+
+    <script
+      type="module"
+      src="/src/main.js"
+    ></script>
   </body>
 </html>
