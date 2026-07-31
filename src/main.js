@@ -5,20 +5,29 @@ const totalStampCount = 3;
 const currentStampId = 'stamp-spot-1';
 
 const arTarget = document.querySelector('#ar-target');
+const characterModel = document.querySelector('#character-model');
 
 const quizModal = document.querySelector('#quiz-modal');
 const quizOptions = document.querySelectorAll('.quiz-option');
 const quizResult = document.querySelector('#quiz-result');
 const quizCloseButton = document.querySelector('#quiz-close-button');
 
-const stampBookButton = document.querySelector('#stamp-book-button');
+const stampBookButton = document.querySelector(
+  '#stamp-book-button'
+);
 const stampModal = document.querySelector('#stamp-modal');
-const stampCloseButton = document.querySelector('#stamp-close-button');
+const stampCloseButton = document.querySelector(
+  '#stamp-close-button'
+);
 
 const stampCount = document.querySelector('#stamp-count');
-const stampModalCount = document.querySelector('#stamp-modal-count');
+const stampModalCount = document.querySelector(
+  '#stamp-modal-count'
+);
 const stampItems = document.querySelectorAll('.stamp-item');
-const completeMessage = document.querySelector('#complete-message');
+const completeMessage = document.querySelector(
+  '#complete-message'
+);
 
 let quizOpened = false;
 let quizAnswered = false;
@@ -128,29 +137,42 @@ const playStampAnimation = (stampId) => {
   );
 
   if (!stampItem) {
+    console.error(
+      `スタンプ要素が見つかりません: ${stampId}`
+    );
+
     return;
   }
 
   stampItem.classList.remove('is-stamping');
 
-  // CSSアニメーションを再実行できるように再描画させる
+  /*
+   * 一度再描画させることで、
+   * 同じアニメーションを再実行できるようにする
+   */
   void stampItem.offsetWidth;
 
   stampItem.classList.add('is-stamping');
 
-  // 押印の途中でスタンプを保存する
+  /*
+   * スタンプが押されたタイミングで
+   * localStorageへ保存する
+   */
   window.setTimeout(() => {
     saveStamp(stampId);
   }, 650);
 
-  // アニメーション終了後にクラスを外す
+  /*
+   * アニメーション終了後にクラスを外す
+   */
   window.setTimeout(() => {
     stampItem.classList.remove('is-stamping');
   }, 950);
 };
 
 /**
- * 正解後にスタンプ台紙を開いて押印する
+ * 正解後にスタンプ台紙を開き、
+ * スタンプ押印演出を実行する
  */
 const showStampAcquisition = (stampId) => {
   window.setTimeout(() => {
@@ -182,30 +204,66 @@ const checkAnswer = (selectedAnswer) => {
       'quiz-result is-correct';
 
     showStampAcquisition(currentStampId);
-  } else {
-    quizResult.textContent =
-      '不正解です。正解は松江市です。';
 
-    quizResult.className =
-      'quiz-result is-incorrect';
+    return;
   }
+
+  quizResult.textContent =
+    '不正解です。正解は松江市です。';
+
+  quizResult.className =
+    'quiz-result is-incorrect';
 };
+
+/**
+ * 3Dモデルの読み込み完了
+ */
+if (characterModel) {
+  characterModel.addEventListener('model-loaded', () => {
+    console.log(
+      '3Dキャラクターを読み込みました。'
+    );
+  });
+
+  /**
+   * 3Dモデルの読み込み失敗
+   */
+  characterModel.addEventListener(
+    'model-error',
+    (event) => {
+      console.error(
+        '3Dキャラクターの読み込みに失敗しました。',
+        event
+      );
+    }
+  );
+} else {
+  console.error(
+    '#character-model が見つかりません。'
+  );
+}
 
 /**
  * 認識対象の画像を見つけたとき
  */
-arTarget.addEventListener('targetFound', () => {
-  console.log('認識画像を発見しました。');
+if (arTarget) {
+  arTarget.addEventListener('targetFound', () => {
+    console.log('認識画像を発見しました。');
 
-  openQuiz();
-});
+    openQuiz();
+  });
 
-/**
- * 認識対象の画像を見失ったとき
- */
-arTarget.addEventListener('targetLost', () => {
-  console.log('認識画像を見失いました。');
-});
+  /**
+   * 認識対象の画像を見失ったとき
+   */
+  arTarget.addEventListener('targetLost', () => {
+    console.log('認識画像を見失いました。');
+  });
+} else {
+  console.error(
+    '#ar-target が見つかりません。'
+  );
+}
 
 /**
  * クイズの選択肢を押したとき
@@ -249,12 +307,46 @@ stampModal.addEventListener('click', (event) => {
 });
 
 /**
- * ページを開いたときに保存状態を読み込む
+ * Escapeキーを押したとき
+ */
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') {
+    return;
+  }
+
+  if (stampModal.classList.contains('is-visible')) {
+    closeStampBook();
+
+    return;
+  }
+
+  if (quizModal.classList.contains('is-visible')) {
+    closeQuiz();
+  }
+});
+
+/**
+ * ページを開いたときに
+ * 保存済みのスタンプ状態を読み込む
  */
 updateStampBook();
 
+/*
+ * 動作確認でスポット1の保存状態を消す場合は、
+ * 下の行のコメントを一時的に外してください。
+ *
+ * localStorage.removeItem('stamp-spot-1');
+ * updateStampBook();
+ */
 
-//localStorage.removeItem('stamp-spot-1');
+/*
+ * すべてのスタンプデータを消す場合は、
+ * 下の行を一時的に使用してください。
+ *
+ * localStorage.clear();
+ * updateStampBook();
+ */
 
-
-console.log('MindARスタンプラリーを起動しました。');
+console.log(
+  'MindARスタンプラリーを起動しました。'
+);

@@ -20,27 +20,70 @@
     <a-scene
       mindar-image="
         imageTargetSrc: https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.mind;
+        autoStart: true;
       "
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
+      renderer="
+        colorManagement: true;
+        physicallyCorrectLights: true;
+      "
     >
+      <!-- 3Dモデル -->
+      <a-assets>
+        <a-asset-item
+          id="character-model-data"
+          src="/models/character.glb"
+        ></a-asset-item>
+      </a-assets>
+
+      <!-- ARカメラ -->
       <a-camera
         position="0 0 0"
         look-controls="enabled: false"
       ></a-camera>
 
+      <!-- 認識対象 -->
       <a-entity
         id="ar-target"
         mindar-image-target="targetIndex: 0"
       >
+        <!-- 認識位置確認用の青い板 -->
         <a-plane
-          color="blue"
-          opacity="0.5"
+          color="#4b73ff"
+          opacity="0.15"
           position="0 0 0"
           width="1"
           height="0.552"
         ></a-plane>
-      </a-entity>
+
+        <!-- 仮の3Dキャラクター -->
+        <a-entity
+          id="character-model"
+          gltf-model="#character-model-data"
+          position="0 0.1 0.15"
+          rotation="0 0 0"
+          scale="0.01 0.01 0.01"
+        ></a-entity>
+
+      <!-- 環境光 -->
+      <a-entity
+        light="
+          type: ambient;
+          color: #ffffff;
+          intensity: 1.5;
+        "
+      ></a-entity>
+
+      <!-- 方向光 -->
+      <a-entity
+        light="
+          type: directional;
+          color: #ffffff;
+          intensity: 1;
+        "
+        position="1 2 1"
+      ></a-entity>
     </a-scene>
 
     <!-- スタンプ台紙を開くボタン -->
@@ -61,6 +104,7 @@
     >
       <div class="quiz-card">
         <div class="speech-triangle"></div>
+
         <h1 id="quiz-question">
           島根県の県庁所在地はどこでしょう？
         </h1>
@@ -118,7 +162,10 @@
       <div class="stamp-card">
         <div class="stamp-card-header">
           <div>
-            <p class="stamp-card-label">ARスタンプラリー</p>
+            <p class="stamp-card-label">
+              ARスタンプラリー
+            </p>
+
             <h2>スタンプ台紙</h2>
           </div>
 
@@ -134,7 +181,9 @@
 
         <p class="stamp-progress-text">
           獲得したスタンプ：
-          <strong id="stamp-modal-count">0 / 3</strong>
+          <strong id="stamp-modal-count">
+            0 / 3
+          </strong>
         </p>
 
         <div class="stamp-list">
@@ -150,13 +199,21 @@
                 alt="スポット1のスタンプ"
               />
 
-              <span class="stamp-placeholder">？</span>
+              <span class="stamp-placeholder">
+                ？
+              </span>
             </div>
 
             <div class="stamp-information">
-              <p class="stamp-number">SPOT 1</p>
+              <p class="stamp-number">
+                SPOT 1
+              </p>
+
               <h3>スポット1</h3>
-              <p class="stamp-status">未獲得</p>
+
+              <p class="stamp-status">
+                未獲得
+              </p>
             </div>
           </div>
 
@@ -172,13 +229,21 @@
                 alt="スポット2のスタンプ"
               />
 
-              <span class="stamp-placeholder">？</span>
+              <span class="stamp-placeholder">
+                ？
+              </span>
             </div>
 
             <div class="stamp-information">
-              <p class="stamp-number">SPOT 2</p>
+              <p class="stamp-number">
+                SPOT 2
+              </p>
+
               <h3>スポット2</h3>
-              <p class="stamp-status">未獲得</p>
+
+              <p class="stamp-status">
+                未獲得
+              </p>
             </div>
           </div>
 
@@ -194,13 +259,21 @@
                 alt="スポット3のスタンプ"
               />
 
-              <span class="stamp-placeholder">？</span>
+              <span class="stamp-placeholder">
+                ？
+              </span>
             </div>
 
             <div class="stamp-information">
-              <p class="stamp-number">SPOT 3</p>
+              <p class="stamp-number">
+                SPOT 3
+              </p>
+
               <h3>スポット3</h3>
-              <p class="stamp-status">未獲得</p>
+
+              <p class="stamp-status">
+                未獲得
+              </p>
             </div>
           </div>
         </div>
@@ -211,7 +284,10 @@
           class="complete-message"
         >
           <p>スタンプラリー達成！</p>
-          <span>すべてのスタンプを獲得しました。</span>
+
+          <span>
+            すべてのスタンプを獲得しました。
+          </span>
         </div>
       </div>
     </div>
