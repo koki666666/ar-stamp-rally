@@ -16,11 +16,14 @@
   </head>
 
   <body>
-    <!-- AR画面 -->
+    <!-- ===========================
+         AR画面
+    ============================ -->
     <a-scene
       mindar-image="
-        imageTargetSrc: https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.mind;
+        imageTargetSrc: /targets/targets.mind;
         autoStart: true;
+        maxTrack: 1;
       "
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
@@ -29,7 +32,9 @@
         physicallyCorrectLights: true;
       "
     >
-      <!-- 3Dモデル -->
+      <!-- ===========================
+           3Dモデルの読み込み
+      ============================ -->
       <a-assets>
         <a-asset-item
           id="character-model-data"
@@ -43,28 +48,65 @@
         look-controls="enabled: false"
       ></a-camera>
 
-      <!-- 認識対象 -->
+      <!-- ===========================
+           1枚目の認識画像
+           targetIndex: 0
+      ============================ -->
       <a-entity
-        id="ar-target"
+        id="ar-target-1"
+        class="ar-target"
+        data-quiz-id="quiz-1"
         mindar-image-target="targetIndex: 0"
       >
-        <!-- 認識位置確認用の青い板 -->
+        <!-- 位置確認用の青い板 -->
         <a-plane
           color="#4b73ff"
-          opacity="0.15"
+          opacity="0.08"
           position="0 0 0"
           width="1"
           height="0.552"
         ></a-plane>
 
-        <!-- 仮の3Dキャラクター -->
+        <!-- 1問目の仮3Dキャラクター -->
         <a-entity
-          id="character-model"
+          id="character-model-1"
+          class="character-model"
           gltf-model="#character-model-data"
           position="0 0.1 0.15"
           rotation="0 0 0"
           scale="0.01 0.01 0.01"
         ></a-entity>
+      </a-entity>
+
+      <!-- ===========================
+           2枚目の認識画像
+           targetIndex: 1
+      ============================ -->
+      <a-entity
+        id="ar-target-2"
+        class="ar-target"
+        data-quiz-id="quiz-2"
+        mindar-image-target="targetIndex: 1"
+      >
+        <!-- 位置確認用のオレンジ色の板 -->
+        <a-plane
+          color="#ff8a4b"
+          opacity="0.08"
+          position="0 0 0"
+          width="1"
+          height="0.552"
+        ></a-plane>
+
+        <!-- 2問目の仮3Dキャラクター -->
+        <a-entity
+          id="character-model-2"
+          class="character-model"
+          gltf-model="#character-model-data"
+          position="0 0.1 0.15"
+          rotation="0 0 0"
+          scale="0.01 0.01 0.01"
+        ></a-entity>
+      </a-entity>
 
       <!-- 環境光 -->
       <a-entity
@@ -86,7 +128,9 @@
       ></a-entity>
     </a-scene>
 
-    <!-- スタンプ台紙を開くボタン -->
+    <!-- ===========================
+         スタンプ台紙を開くボタン
+    ============================ -->
     <button
       id="stamp-book-button"
       class="stamp-book-button"
@@ -96,7 +140,9 @@
       <span id="stamp-count">0 / 3</span>
     </button>
 
-    <!-- キャラクターのクイズ画面 -->
+    <!-- ===========================
+         クイズ画面
+    ============================ -->
     <div
       id="quiz-modal"
       class="quiz-modal"
@@ -105,38 +151,16 @@
       <div class="quiz-card">
         <div class="speech-triangle"></div>
 
+        <!-- 問題文はmain.jsで切り替える -->
         <h1 id="quiz-question">
-          島根県の県庁所在地はどこでしょう？
+          問題を読み込んでいます。
         </h1>
 
+        <!-- 選択肢はmain.jsで生成する -->
         <div
           id="quiz-options"
           class="quiz-options"
-        >
-          <button
-            class="quiz-option"
-            type="button"
-            data-answer="出雲市"
-          >
-            出雲市
-          </button>
-
-          <button
-            class="quiz-option"
-            type="button"
-            data-answer="松江市"
-          >
-            松江市
-          </button>
-
-          <button
-            class="quiz-option"
-            type="button"
-            data-answer="浜田市"
-          >
-            浜田市
-          </button>
-        </div>
+        ></div>
 
         <p
           id="quiz-result"
@@ -153,7 +177,9 @@
       </div>
     </div>
 
-    <!-- スタンプ台紙画面 -->
+    <!-- ===========================
+         スタンプ台紙画面
+    ============================ -->
     <div
       id="stamp-modal"
       class="stamp-modal"
@@ -187,7 +213,9 @@
         </p>
 
         <div class="stamp-list">
-          <!-- スポット1 -->
+          <!-- ===========================
+               スポット1
+          ============================ -->
           <div
             class="stamp-item"
             data-stamp-id="stamp-spot-1"
@@ -217,7 +245,9 @@
             </div>
           </div>
 
-          <!-- スポット2 -->
+          <!-- ===========================
+               スポット2
+          ============================ -->
           <div
             class="stamp-item"
             data-stamp-id="stamp-spot-2"
@@ -247,7 +277,9 @@
             </div>
           </div>
 
-          <!-- スポット3 -->
+          <!-- ===========================
+               スポット3
+          ============================ -->
           <div
             class="stamp-item"
             data-stamp-id="stamp-spot-3"
