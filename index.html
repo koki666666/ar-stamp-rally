@@ -16,6 +16,7 @@
   </head>
 
   <body>
+    <!-- AR画面 -->
     <a-scene
       mindar-image="
         imageTargetSrc: https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.mind;
@@ -42,7 +43,17 @@
       </a-entity>
     </a-scene>
 
-    <!-- キャラクターが話しているように見せるクイズ画面 -->
+    <!-- スタンプ台紙を開くボタン -->
+    <button
+      id="stamp-book-button"
+      class="stamp-book-button"
+      type="button"
+    >
+      スタンプ
+      <span id="stamp-count">0 / 3</span>
+    </button>
+
+    <!-- キャラクターのクイズ画面 -->
     <div
       id="quiz-modal"
       class="quiz-modal"
@@ -95,6 +106,113 @@
         >
           閉じる
         </button>
+      </div>
+    </div>
+
+    <!-- スタンプ台紙画面 -->
+    <div
+      id="stamp-modal"
+      class="stamp-modal"
+      aria-hidden="true"
+    >
+      <div class="stamp-card">
+        <div class="stamp-card-header">
+          <div>
+            <p class="stamp-card-label">ARスタンプラリー</p>
+            <h2>スタンプ台紙</h2>
+          </div>
+
+          <button
+            id="stamp-close-button"
+            class="stamp-close-button"
+            type="button"
+            aria-label="スタンプ台紙を閉じる"
+          >
+            ×
+          </button>
+        </div>
+
+        <p class="stamp-progress-text">
+          獲得したスタンプ：
+          <strong id="stamp-modal-count">0 / 3</strong>
+        </p>
+
+        <div class="stamp-list">
+          <!-- スポット1 -->
+          <div
+            class="stamp-item"
+            data-stamp-id="stamp-spot-1"
+          >
+            <div class="stamp-mark">
+              <img
+                class="stamp-image"
+                src="/images/仮画像.png"
+                alt="スポット1のスタンプ"
+              />
+
+              <span class="stamp-placeholder">？</span>
+            </div>
+
+            <div class="stamp-information">
+              <p class="stamp-number">SPOT 1</p>
+              <h3>スポット1</h3>
+              <p class="stamp-status">未獲得</p>
+            </div>
+          </div>
+
+          <!-- スポット2 -->
+          <div
+            class="stamp-item"
+            data-stamp-id="stamp-spot-2"
+          >
+            <div class="stamp-mark">
+              <img
+                class="stamp-image"
+                src="/images/仮画像.png"
+                alt="スポット2のスタンプ"
+              />
+
+              <span class="stamp-placeholder">？</span>
+            </div>
+
+            <div class="stamp-information">
+              <p class="stamp-number">SPOT 2</p>
+              <h3>スポット2</h3>
+              <p class="stamp-status">未獲得</p>
+            </div>
+          </div>
+
+          <!-- スポット3 -->
+          <div
+            class="stamp-item"
+            data-stamp-id="stamp-spot-3"
+          >
+            <div class="stamp-mark">
+              <img
+                class="stamp-image"
+                src="/images/仮画像.png"
+                alt="スポット3のスタンプ"
+              />
+
+              <span class="stamp-placeholder">？</span>
+            </div>
+
+            <div class="stamp-information">
+              <p class="stamp-number">SPOT 3</p>
+              <h3>スポット3</h3>
+              <p class="stamp-status">未獲得</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 全スタンプ獲得後に表示 -->
+        <div
+          id="complete-message"
+          class="complete-message"
+        >
+          <p>スタンプラリー達成！</p>
+          <span>すべてのスタンプを獲得しました。</span>
+        </div>
       </div>
     </div>
 

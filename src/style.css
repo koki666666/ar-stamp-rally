@@ -16,7 +16,10 @@ a-scene {
   height: 100%;
 }
 
-/* クイズ画面全体 */
+/* ===========================
+   クイズ画面
+=========================== */
+
 .quiz-modal {
   position: fixed;
   inset: 0;
@@ -31,12 +34,10 @@ a-scene {
   pointer-events: none;
 }
 
-/* JavaScriptでis-visibleが付いたときだけ表示 */
 .quiz-modal.is-visible {
   display: flex;
 }
 
-/* 白いクイズカード */
 .quiz-card {
   position: relative;
 
@@ -81,13 +82,12 @@ a-scene {
   text-align: left;
 }
 
-/* 選択肢の並び */
+/* 選択肢 */
 .quiz-options {
   display: grid;
   gap: 10px;
 }
 
-/* 選択肢ボタン */
 .quiz-option {
   width: 100%;
   padding: 12px 14px;
@@ -114,7 +114,7 @@ a-scene {
   opacity: 0.6;
 }
 
-/* 正解・不正解の表示欄 */
+/* 正解・不正解 */
 .quiz-result {
   min-height: 26px;
   margin: 16px 0 0;
@@ -125,12 +125,10 @@ a-scene {
   text-align: center;
 }
 
-/* 正解時 */
 .quiz-result.is-correct {
   color: #14833b;
 }
 
-/* 不正解時 */
 .quiz-result.is-incorrect {
   color: #d52b2b;
 }
@@ -155,13 +153,378 @@ a-scene {
   cursor: pointer;
 }
 
-/* 回答後だけ閉じるボタンを表示 */
 .quiz-result.is-correct + .quiz-close-button,
 .quiz-result.is-incorrect + .quiz-close-button {
   display: block;
 }
 
-/* スマホの画面が低い場合 */
+/* ===========================
+   スタンプ台紙を開くボタン
+=========================== */
+
+.stamp-book-button {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 2000;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 10px 16px;
+
+  border: none;
+  border-radius: 999px;
+
+  background: #ffffff;
+  color: #222222;
+
+  font-size: 15px;
+  font-weight: bold;
+
+  cursor: pointer;
+
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+}
+
+.stamp-book-button:hover {
+  background: #f5f5f5;
+}
+
+#stamp-count {
+  color: #4b73ff;
+}
+
+/* ===========================
+   スタンプ台紙
+=========================== */
+
+.stamp-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+
+  display: none;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.stamp-modal.is-visible {
+  display: flex;
+}
+
+.stamp-card {
+  width: min(100%, 500px);
+  max-height: calc(100vh - 40px);
+  padding: 24px;
+
+  overflow-y: auto;
+
+  border-radius: 20px;
+  background: #ffffff;
+
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+}
+
+.stamp-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin-bottom: 20px;
+}
+
+.stamp-card-label {
+  margin: 0;
+
+  font-size: 13px;
+  font-weight: bold;
+
+  color: #4b73ff;
+}
+
+.stamp-card h2 {
+  margin: 4px 0 0;
+
+  font-size: 26px;
+}
+
+.stamp-close-button {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+
+  width: 40px;
+  height: 40px;
+  padding: 0;
+
+  border: none;
+  border-radius: 50%;
+
+  background: #eeeeee;
+  color: #111111;
+
+  font-size: 24px;
+  line-height: 1;
+
+  cursor: pointer;
+}
+
+.stamp-progress-text {
+  margin: 0 0 20px;
+
+  font-size: 16px;
+}
+
+.stamp-list {
+  display: grid;
+  gap: 16px;
+}
+
+/* ===========================
+   スタンプ1件
+=========================== */
+
+.stamp-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  padding: 16px;
+
+  border: 2px solid #dddddd;
+  border-radius: 16px;
+
+  background: #ffffff;
+}
+
+.stamp-mark {
+  position: relative;
+
+  display: grid;
+  flex: 0 0 72px;
+  place-items: center;
+
+  width: 72px;
+  height: 72px;
+
+  overflow: hidden;
+
+  border-radius: 50%;
+  background: #eeeeee;
+}
+
+.stamp-placeholder {
+  position: relative;
+  z-index: 1;
+
+  font-size: 28px;
+  font-weight: bold;
+
+  color: #111111;
+}
+
+.stamp-image {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+
+  display: none;
+
+  width: 64px;
+  height: 64px;
+
+  max-width: 64px;
+  max-height: 64px;
+
+  object-fit: contain;
+
+  transform: translate(-50%, -50%);
+}
+
+.stamp-information {
+  flex: 1;
+  min-width: 0;
+}
+
+.stamp-number {
+  margin: 0;
+
+  font-size: 12px;
+
+  color: #888888;
+}
+
+.stamp-information h3 {
+  margin: 4px 0;
+
+  font-size: 18px;
+}
+
+.stamp-status {
+  margin: 0;
+
+  color: #888888;
+}
+
+/* ===========================
+   獲得済み
+=========================== */
+
+.stamp-item.completed {
+  border-color: #4caf50;
+  background: #f4fff4;
+}
+
+.stamp-item.completed .stamp-mark {
+  background: #ffffff;
+}
+
+.stamp-item.completed .stamp-image {
+  display: block;
+}
+
+.stamp-item.completed .stamp-placeholder {
+  display: none;
+}
+
+.stamp-item.completed .stamp-status {
+  color: #4caf50;
+  font-weight: bold;
+}
+
+/* ===========================
+   スタンプ押印アニメーション
+=========================== */
+
+.stamp-item.is-stamping .stamp-image {
+  display: block;
+
+  animation: stamp-press 0.9s
+    cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+
+.stamp-item.is-stamping .stamp-placeholder {
+  display: none;
+}
+
+.stamp-item.is-stamping .stamp-mark::after {
+  content: '';
+
+  position: absolute;
+  inset: 3px;
+  z-index: 3;
+
+  border: 3px solid rgba(76, 175, 80, 0.75);
+  border-radius: 50%;
+
+  pointer-events: none;
+
+  animation: stamp-impact 0.9s ease-out;
+}
+
+@keyframes stamp-press {
+  0% {
+    opacity: 0;
+
+    transform:
+      translate(-50%, -220%)
+      scale(2.3)
+      rotate(-15deg);
+  }
+
+  55% {
+    opacity: 1;
+
+    transform:
+      translate(-50%, -45%)
+      scale(0.8)
+      rotate(4deg);
+  }
+
+  72% {
+    transform:
+      translate(-50%, -50%)
+      scale(1.15)
+      rotate(-2deg);
+  }
+
+  100% {
+    opacity: 1;
+
+    transform:
+      translate(-50%, -50%)
+      scale(1)
+      rotate(0deg);
+  }
+}
+
+@keyframes stamp-impact {
+  0%,
+  45% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+
+  60% {
+    opacity: 1;
+    transform: scale(0.9);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.3);
+  }
+}
+
+/* ===========================
+   コンプリート表示
+=========================== */
+
+.complete-message {
+  display: none;
+
+  margin-top: 24px;
+  padding: 18px;
+
+  border-radius: 16px;
+
+  text-align: center;
+
+  background: #fff7d6;
+}
+
+.complete-message.show {
+  display: block;
+}
+
+.complete-message p {
+  margin: 0;
+
+  font-size: 22px;
+  font-weight: bold;
+
+  color: #d88400;
+}
+
+.complete-message span {
+  display: block;
+
+  margin-top: 8px;
+
+  color: #555555;
+}
+
+/* ===========================
+   画面が低いスマホ向け
+=========================== */
+
 @media (max-height: 700px) {
   .quiz-card {
     max-height: 55vh;
@@ -169,11 +532,40 @@ a-scene {
   }
 
   .quiz-card h1 {
-    font-size: 18px;
     margin-bottom: 12px;
+
+    font-size: 18px;
   }
 
   .quiz-option {
     padding: 10px 12px;
+  }
+
+  .stamp-card {
+    padding: 18px;
+  }
+
+  .stamp-list {
+    gap: 10px;
+  }
+
+  .stamp-item {
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .stamp-mark {
+    flex-basis: 60px;
+
+    width: 60px;
+    height: 60px;
+  }
+
+  .stamp-image {
+    width: 54px;
+    height: 54px;
+
+    max-width: 54px;
+    max-height: 54px;
   }
 }
