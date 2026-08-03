@@ -32,9 +32,7 @@
         physicallyCorrectLights: true;
       "
     >
-      <!-- ===========================
-           3Dモデルの読み込み
-      ============================ -->
+      <!-- 3Dモデルの読み込み -->
       <a-assets>
         <a-asset-item
           id="character-model-data"
@@ -50,7 +48,6 @@
 
       <!-- ===========================
            1枚目の認識画像
-           targetIndex: 0
       ============================ -->
       <a-entity
         id="ar-target-1"
@@ -80,7 +77,6 @@
 
       <!-- ===========================
            2枚目の認識画像
-           targetIndex: 1
       ============================ -->
       <a-entity
         id="ar-target-2"
@@ -129,6 +125,19 @@
     </a-scene>
 
     <!-- ===========================
+         画像認識ガイド文
+    ============================ -->
+    <div
+      id="scan-guide"
+      class="scan-guide"
+      aria-hidden="false"
+    >
+      <p class="scan-guide-text">
+        この枠の中にポスターを映してください
+      </p>
+    </div>
+
+    <!-- ===========================
          スタンプ台紙を開くボタン
     ============================ -->
     <button
@@ -151,12 +160,10 @@
       <div class="quiz-card">
         <div class="speech-triangle"></div>
 
-        <!-- 問題文はmain.jsで切り替える -->
         <h1 id="quiz-question">
           問題を読み込んでいます。
         </h1>
 
-        <!-- 選択肢はmain.jsで生成する -->
         <div
           id="quiz-options"
           class="quiz-options"
@@ -213,9 +220,7 @@
         </p>
 
         <div class="stamp-list">
-          <!-- ===========================
-               スポット1
-          ============================ -->
+          <!-- スポット1 -->
           <div
             class="stamp-item"
             data-stamp-id="stamp-spot-1"
@@ -245,9 +250,7 @@
             </div>
           </div>
 
-          <!-- ===========================
-               スポット2
-          ============================ -->
+          <!-- スポット2 -->
           <div
             class="stamp-item"
             data-stamp-id="stamp-spot-2"
@@ -277,9 +280,7 @@
             </div>
           </div>
 
-          <!-- ===========================
-               スポット3
-          ============================ -->
+          <!-- スポット3 -->
           <div
             class="stamp-item"
             data-stamp-id="stamp-spot-3"

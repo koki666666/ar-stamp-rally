@@ -17,6 +17,57 @@ a-scene {
 }
 
 /* ===========================
+   画像認識ガイド文
+=========================== */
+
+.scan-guide {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+
+  pointer-events: none;
+
+  opacity: 1;
+  visibility: visible;
+
+  transition:
+    opacity 0.3s ease,
+    visibility 0.3s ease;
+}
+
+.scan-guide.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.scan-guide-text {
+  position: absolute;
+  left: 50%;
+  bottom: 14vh;
+
+  width: max-content;
+  max-width: calc(100vw - 40px);
+  margin: 0;
+  padding: 11px 20px;
+
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+
+  background: rgba(0, 0, 0, 0.72);
+  color: #ffffff;
+
+  font-size: 15px;
+  font-weight: bold;
+  line-height: 1.4;
+
+  text-align: center;
+
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
+
+  transform: translateX(-50%);
+}
+
+/* ===========================
    クイズ画面
 =========================== */
 
@@ -55,7 +106,6 @@ a-scene {
   pointer-events: auto;
 }
 
-/* 吹き出しの三角形 */
 .speech-triangle {
   position: absolute;
   top: -14px;
@@ -71,7 +121,6 @@ a-scene {
   transform: translateX(-50%);
 }
 
-/* 問題文 */
 .quiz-card h1 {
   margin: 0 0 16px;
 
@@ -82,7 +131,6 @@ a-scene {
   text-align: left;
 }
 
-/* 選択肢 */
 .quiz-options {
   display: grid;
   gap: 10px;
@@ -114,7 +162,6 @@ a-scene {
   opacity: 0.6;
 }
 
-/* 正解・不正解 */
 .quiz-result {
   min-height: 26px;
   margin: 16px 0 0;
@@ -133,7 +180,6 @@ a-scene {
   color: #d52b2b;
 }
 
-/* 閉じるボタン */
 .quiz-close-button {
   display: none;
 
@@ -526,6 +572,14 @@ a-scene {
 =========================== */
 
 @media (max-height: 700px) {
+  .scan-guide-text {
+    bottom: 11vh;
+
+    padding: 9px 16px;
+
+    font-size: 13px;
+  }
+
   .quiz-card {
     max-height: 55vh;
     padding: 14px;
@@ -567,5 +621,16 @@ a-scene {
 
     max-width: 54px;
     max-height: 54px;
+  }
+}
+
+@media (max-width: 480px) {
+  .scan-guide-text {
+    bottom: 13vh;
+
+    width: calc(100% - 48px);
+    max-width: 360px;
+
+    font-size: 14px;
   }
 }
