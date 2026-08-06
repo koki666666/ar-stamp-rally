@@ -693,21 +693,21 @@ a-scene {
 
 .following-character {
   position: fixed;
-  top: 100px;
-  right: 18px;
+  top: 50%;
+  left: 50%;
   z-index: 950;
 
   display: none;
 
-  width: 130px;
-  max-width: 30vw;
+  width: 160px;
+  max-width: 38vw;
 
   pointer-events: none;
 
   opacity: 0;
 
   transform:
-    translateY(-8px)
+    translate(-50%, -50%)
     scale(0.95);
 
   transition:
@@ -721,7 +721,7 @@ a-scene {
   opacity: 1;
 
   transform:
-    translateY(0)
+    translate(-50%, -50%)
     scale(1);
 }
 
@@ -761,29 +761,18 @@ a-scene {
   }
 }
 
-/* クイズ表示中はスタンプボタンと重なりにくい位置へ */
-.quiz-modal.is-visible
-  ~ .following-character {
-  top: 90px;
-}
-
 /* 画面が低い端末向け */
 @media (max-height: 700px) {
   .following-character {
-    top: 80px;
-    right: 12px;
-
-    width: 105px;
+    width: 130px;
+    max-width: 34vw;
   }
 }
 
 /* 横幅が狭いスマホ向け */
 @media (max-width: 480px) {
   .following-character {
-    top: 82px;
-    right: 10px;
-
-    width: 105px;
-    max-width: 28vw;
+    width: 140px;
+    max-width: 38vw;
   }
 }
