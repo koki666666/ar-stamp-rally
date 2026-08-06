@@ -686,3 +686,104 @@ a-scene {
     font-size: 23px;
   }
 }
+
+/* ===========================
+   ポスター認識後の追従キャラクター
+=========================== */
+
+.following-character {
+  position: fixed;
+  top: 100px;
+  right: 18px;
+  z-index: 950;
+
+  display: none;
+
+  width: 130px;
+  max-width: 30vw;
+
+  pointer-events: none;
+
+  opacity: 0;
+
+  transform:
+    translateY(-8px)
+    scale(0.95);
+
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+
+.following-character.is-visible {
+  display: block;
+
+  opacity: 1;
+
+  transform:
+    translateY(0)
+    scale(1);
+}
+
+.following-character img {
+  display: block;
+
+  width: 100%;
+  height: auto;
+
+  object-fit: contain;
+
+  filter:
+    drop-shadow(
+      0 8px 12px
+      rgba(0, 0, 0, 0.25)
+    );
+
+  animation:
+    following-character-floating
+    2.2s
+    ease-in-out
+    infinite;
+}
+
+@keyframes following-character-floating {
+  0%,
+  100% {
+    transform:
+      translateY(0)
+      rotate(-1deg);
+  }
+
+  50% {
+    transform:
+      translateY(-10px)
+      rotate(1deg);
+  }
+}
+
+/* クイズ表示中はスタンプボタンと重なりにくい位置へ */
+.quiz-modal.is-visible
+  ~ .following-character {
+  top: 90px;
+}
+
+/* 画面が低い端末向け */
+@media (max-height: 700px) {
+  .following-character {
+    top: 80px;
+    right: 12px;
+
+    width: 105px;
+  }
+}
+
+/* 横幅が狭いスマホ向け */
+@media (max-width: 480px) {
+  .following-character {
+    top: 82px;
+    right: 10px;
+
+    width: 105px;
+    max-width: 28vw;
+  }
+}

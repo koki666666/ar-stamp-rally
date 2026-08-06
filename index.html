@@ -32,12 +32,15 @@
         physicallyCorrectLights: true;
       "
     >
-      <!-- 3Dモデルの読み込み -->
+      <!-- ===========================
+           画像素材の読み込み
+      ============================ -->
       <a-assets>
-        <a-asset-item
-          id="character-model-data"
-          src="/models/character.glb"
-        ></a-asset-item>
+        <img
+          id="sadamon-image"
+          src="/characters/sadamon_a.png"
+          alt=""
+        />
       </a-assets>
 
       <!-- ARカメラ -->
@@ -64,15 +67,21 @@
           height="0.552"
         ></a-plane>
 
-        <!-- 1問目の仮3Dキャラクター -->
-        <a-entity
-          id="character-model-1"
-          class="character-model"
-          gltf-model="#character-model-data"
-          position="0 0.1 0.15"
-          rotation="0 0 0"
-          scale="0.01 0.01 0.01"
-        ></a-entity>
+        <!-- 1問目の2Dキャラクター -->
+        <a-image
+          id="character-image-1"
+          class="character-image"
+          src="#sadamon-image"
+          position="0 0.17 0.15"
+          width="0.38"
+          height="0.48"
+          transparent="true"
+          material="
+            alphaTest: 0.01;
+            transparent: true;
+            side: double;
+          "
+        ></a-image>
       </a-entity>
 
       <!-- ===========================
@@ -93,36 +102,37 @@
           height="0.552"
         ></a-plane>
 
-        <!-- 2問目の仮3Dキャラクター -->
-        <a-entity
-          id="character-model-2"
-          class="character-model"
-          gltf-model="#character-model-data"
-          position="0 0.1 0.15"
-          rotation="0 0 0"
-          scale="0.01 0.01 0.01"
-        ></a-entity>
+        <!-- 2問目の2Dキャラクター -->
+        <a-image
+          id="character-image-2"
+          class="character-image"
+          src="#sadamon-image"
+          position="0 0.17 0.15"
+          width="0.38"
+          height="0.48"
+          transparent="true"
+          material="
+            alphaTest: 0.01;
+            transparent: true;
+            side: double;
+          "
+        ></a-image>
       </a-entity>
-
-      <!-- 環境光 -->
-      <a-entity
-        light="
-          type: ambient;
-          color: #ffffff;
-          intensity: 1.5;
-        "
-      ></a-entity>
-
-      <!-- 方向光 -->
-      <a-entity
-        light="
-          type: directional;
-          color: #ffffff;
-          intensity: 1;
-        "
-        position="1 2 1"
-      ></a-entity>
     </a-scene>
+
+    <!-- ===========================
+         ポスター認識後の追従キャラクター
+    ============================ -->
+    <div
+      id="following-character"
+      class="following-character"
+      aria-hidden="true"
+    >
+      <img
+        src="/characters/sadamon_a.png"
+        alt="さだモン"
+      />
+    </div>
 
     <!-- ===========================
          画像認識ガイド文

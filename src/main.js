@@ -2,7 +2,7 @@ import './style.css';
 
 /**
  * 本番環境ではスマートフォン・タブレットのみ利用可能にする
- * localhostではPCからも確認可能
+ * localhostやローカルIPではPCからも確認可能
  */
 const isDevelopment =
   location.hostname === 'localhost' ||
@@ -18,11 +18,14 @@ if (!isDevelopment && !isMobileOrTablet) {
   document.body.innerHTML = `
     <main class="device-restriction">
       <div class="device-restriction-card">
-        <h1>スマートフォン・タブレット専用です</h1>
+        <h1>
+          スマートフォン・タブレット専用です
+        </h1>
 
         <p>
           このARスタンプラリーは、
-          スマートフォンまたはタブレットからご利用ください。
+          スマートフォンまたはタブレットから
+          ご利用ください。
         </p>
       </div>
     </main>
@@ -40,58 +43,129 @@ const totalStampCount = 3;
  */
 const quizData = {
   'quiz-1': {
-    question: '島根県の県庁所在地はどこでしょう？',
-    options: ['出雲市', '松江市', '浜田市'],
+    question:
+      '島根県の県庁所在地はどこでしょう？',
+
+    options: [
+      '出雲市',
+      '松江市',
+      '浜田市',
+    ],
+
     correctAnswer: '松江市',
     stampId: 'stamp-spot-1',
   },
 
   'quiz-2': {
-    question: '島根県にある世界遺産はどれでしょう？',
-    options: ['石見銀山', '厳島神社', '姫路城'],
+    question:
+      '島根県にある世界遺産はどれでしょう？',
+
+    options: [
+      '石見銀山',
+      '厳島神社',
+      '名古屋城',
+    ],
+
     correctAnswer: '石見銀山',
     stampId: 'stamp-spot-2',
   },
 };
 
-const arTargets = document.querySelectorAll('.ar-target');
-const characterModels =
-  document.querySelectorAll('.character-model');
+const arTargets =
+  document.querySelectorAll('.ar-target');
 
-const scanGuide = document.querySelector('#scan-guide');
+const followingCharacter =
+  document.querySelector(
+    '#following-character'
+  );
 
-const quizModal = document.querySelector('#quiz-modal');
+const scanGuide =
+  document.querySelector('#scan-guide');
+
+const quizModal =
+  document.querySelector('#quiz-modal');
+
 const quizQuestion =
   document.querySelector('#quiz-question');
+
 const quizOptions =
   document.querySelector('#quiz-options');
+
 const quizResult =
   document.querySelector('#quiz-result');
-const quizCloseButton =
-  document.querySelector('#quiz-close-button');
 
-const stampBookButton = document.querySelector(
-  '#stamp-book-button'
-);
+const quizCloseButton =
+  document.querySelector(
+    '#quiz-close-button'
+  );
+
+const stampBookButton =
+  document.querySelector(
+    '#stamp-book-button'
+  );
+
 const stampModal =
   document.querySelector('#stamp-modal');
-const stampCloseButton = document.querySelector(
-  '#stamp-close-button'
-);
+
+const stampCloseButton =
+  document.querySelector(
+    '#stamp-close-button'
+  );
 
 const stampCount =
   document.querySelector('#stamp-count');
-const stampModalCount = document.querySelector(
-  '#stamp-modal-count'
-);
+
+const stampModalCount =
+  document.querySelector(
+    '#stamp-modal-count'
+  );
+
 const stampItems =
   document.querySelectorAll('.stamp-item');
-const completeMessage = document.querySelector(
-  '#complete-message'
-);
+
+const completeMessage =
+  document.querySelector(
+    '#complete-message'
+  );
 
 let currentQuizId = null;
 let quizAnswered = false;
+
+/**
+ * 追従キャラクターを表示する
+ */
+const showFollowingCharacter = () => {
+  if (!followingCharacter) {
+    return;
+  }
+
+  followingCharacter.classList.add(
+    'is-visible'
+  );
+
+  followingCharacter.setAttribute(
+    'aria-hidden',
+    'false'
+  );
+};
+
+/**
+ * 追従キャラクターを非表示にする
+ */
+const hideFollowingCharacter = () => {
+  if (!followingCharacter) {
+    return;
+  }
+
+  followingCharacter.classList.remove(
+    'is-visible'
+  );
+
+  followingCharacter.setAttribute(
+    'aria-hidden',
+    'true'
+  );
+};
 
 /**
  * 画像認識ガイドを表示する
@@ -101,8 +175,14 @@ const showScanGuide = () => {
     return;
   }
 
-  scanGuide.classList.remove('is-hidden');
-  scanGuide.setAttribute('aria-hidden', 'false');
+  scanGuide.classList.remove(
+    'is-hidden'
+  );
+
+  scanGuide.setAttribute(
+    'aria-hidden',
+    'false'
+  );
 };
 
 /**
@@ -113,8 +193,14 @@ const hideScanGuide = () => {
     return;
   }
 
-  scanGuide.classList.add('is-hidden');
-  scanGuide.setAttribute('aria-hidden', 'true');
+  scanGuide.classList.add(
+    'is-hidden'
+  );
+
+  scanGuide.setAttribute(
+    'aria-hidden',
+    'true'
+  );
 };
 
 /**
@@ -146,16 +232,27 @@ const createQuizOptions = (quiz) => {
     const optionButton =
       document.createElement('button');
 
-    optionButton.className = 'quiz-option';
+    optionButton.className =
+      'quiz-option';
+
     optionButton.type = 'button';
-    optionButton.dataset.answer = answer;
-    optionButton.textContent = answer;
 
-    optionButton.addEventListener('click', () => {
-      checkAnswer(answer);
-    });
+    optionButton.dataset.answer =
+      answer;
 
-    quizOptions.appendChild(optionButton);
+    optionButton.textContent =
+      answer;
+
+    optionButton.addEventListener(
+      'click',
+      () => {
+        checkAnswer(answer);
+      }
+    );
+
+    quizOptions.appendChild(
+      optionButton
+    );
   });
 };
 
@@ -174,7 +271,9 @@ const openQuiz = (quizId) => {
   }
 
   if (
-    quizModal.classList.contains('is-visible') &&
+    quizModal.classList.contains(
+      'is-visible'
+    ) &&
     currentQuizId === quizId
   ) {
     return;
@@ -183,15 +282,22 @@ const openQuiz = (quizId) => {
   currentQuizId = quizId;
   quizAnswered = false;
 
-  quizQuestion.textContent = quiz.question;
+  quizQuestion.textContent =
+    quiz.question;
 
   resetQuizResult();
   createQuizOptions(quiz);
 
   hideScanGuide();
 
-  quizModal.classList.add('is-visible');
-  quizModal.setAttribute('aria-hidden', 'false');
+  quizModal.classList.add(
+    'is-visible'
+  );
+
+  quizModal.setAttribute(
+    'aria-hidden',
+    'false'
+  );
 
   console.log(
     `クイズを表示しました: ${quizId}`
@@ -202,8 +308,14 @@ const openQuiz = (quizId) => {
  * クイズ画面を閉じる
  */
 const closeQuiz = () => {
-  quizModal.classList.remove('is-visible');
-  quizModal.setAttribute('aria-hidden', 'true');
+  quizModal.classList.remove(
+    'is-visible'
+  );
+
+  quizModal.setAttribute(
+    'aria-hidden',
+    'true'
+  );
 
   showScanGuide();
 };
@@ -216,16 +328,28 @@ const openStampBook = () => {
 
   hideScanGuide();
 
-  stampModal.classList.add('is-visible');
-  stampModal.setAttribute('aria-hidden', 'false');
+  stampModal.classList.add(
+    'is-visible'
+  );
+
+  stampModal.setAttribute(
+    'aria-hidden',
+    'false'
+  );
 };
 
 /**
  * スタンプ台紙を閉じる
  */
 const closeStampBook = () => {
-  stampModal.classList.remove('is-visible');
-  stampModal.setAttribute('aria-hidden', 'true');
+  stampModal.classList.remove(
+    'is-visible'
+  );
+
+  stampModal.setAttribute(
+    'aria-hidden',
+    'true'
+  );
 
   showScanGuide();
 };
@@ -235,7 +359,9 @@ const closeStampBook = () => {
  */
 const disableOptions = () => {
   const optionButtons =
-    quizOptions.querySelectorAll('.quiz-option');
+    quizOptions.querySelectorAll(
+      '.quiz-option'
+    );
 
   optionButtons.forEach((option) => {
     option.disabled = true;
@@ -246,7 +372,10 @@ const disableOptions = () => {
  * スタンプを保存する
  */
 const saveStamp = (stampId) => {
-  localStorage.setItem(stampId, 'completed');
+  localStorage.setItem(
+    stampId,
+    'completed'
+  );
 
   updateStampBook();
 };
@@ -256,7 +385,8 @@ const saveStamp = (stampId) => {
  */
 const isStampCompleted = (stampId) => {
   return (
-    localStorage.getItem(stampId) === 'completed'
+    localStorage.getItem(stampId) ===
+    'completed'
   );
 };
 
@@ -267,9 +397,13 @@ const updateStampBook = () => {
   let completedStampCount = 0;
 
   stampItems.forEach((stampItem) => {
-    const stampId = stampItem.dataset.stampId;
+    const stampId =
+      stampItem.dataset.stampId;
+
     const stampStatus =
-      stampItem.querySelector('.stamp-status');
+      stampItem.querySelector(
+        '.stamp-status'
+      );
 
     const completed =
       isStampCompleted(stampId);
@@ -277,11 +411,23 @@ const updateStampBook = () => {
     if (completed) {
       completedStampCount += 1;
 
-      stampItem.classList.add('completed');
-      stampStatus.textContent = '獲得済み';
+      stampItem.classList.add(
+        'completed'
+      );
+
+      if (stampStatus) {
+        stampStatus.textContent =
+          '獲得済み';
+      }
     } else {
-      stampItem.classList.remove('completed');
-      stampStatus.textContent = '未獲得';
+      stampItem.classList.remove(
+        'completed'
+      );
+
+      if (stampStatus) {
+        stampStatus.textContent =
+          '未獲得';
+      }
     }
   });
 
@@ -291,20 +437,30 @@ const updateStampBook = () => {
   stampModalCount.textContent =
     `${completedStampCount} / ${totalStampCount}`;
 
-  if (completedStampCount === totalStampCount) {
-    completeMessage.classList.add('show');
+  if (
+    completedStampCount ===
+    totalStampCount
+  ) {
+    completeMessage.classList.add(
+      'show'
+    );
   } else {
-    completeMessage.classList.remove('show');
+    completeMessage.classList.remove(
+      'show'
+    );
   }
 };
 
 /**
  * スタンプ押印アニメーションを実行する
  */
-const playStampAnimation = (stampId) => {
-  const stampItem = document.querySelector(
-    `[data-stamp-id="${stampId}"]`
-  );
+const playStampAnimation = (
+  stampId
+) => {
+  const stampItem =
+    document.querySelector(
+      `[data-stamp-id="${stampId}"]`
+    );
 
   if (!stampItem) {
     console.error(
@@ -314,18 +470,28 @@ const playStampAnimation = (stampId) => {
     return;
   }
 
-  stampItem.classList.remove('is-stamping');
+  stampItem.classList.remove(
+    'is-stamping'
+  );
 
+  /*
+   * 再描画させることで、
+   * 同じアニメーションを再実行できる
+   */
   void stampItem.offsetWidth;
 
-  stampItem.classList.add('is-stamping');
+  stampItem.classList.add(
+    'is-stamping'
+  );
 
   window.setTimeout(() => {
     saveStamp(stampId);
   }, 650);
 
   window.setTimeout(() => {
-    stampItem.classList.remove('is-stamping');
+    stampItem.classList.remove(
+      'is-stamping'
+    );
   }, 950);
 };
 
@@ -333,7 +499,9 @@ const playStampAnimation = (stampId) => {
  * 正解後にスタンプ台紙を開き、
  * スタンプ押印演出を実行する
  */
-const showStampAcquisition = (stampId) => {
+const showStampAcquisition = (
+  stampId
+) => {
   window.setTimeout(() => {
     closeQuiz();
     openStampBook();
@@ -347,7 +515,9 @@ const showStampAcquisition = (stampId) => {
 /**
  * 回答が正解か判定する
  */
-const checkAnswer = (selectedAnswer) => {
+const checkAnswer = (
+  selectedAnswer
+) => {
   if (quizAnswered) {
     return;
   }
@@ -363,10 +533,16 @@ const checkAnswer = (selectedAnswer) => {
   }
 
   quizAnswered = true;
+
   disableOptions();
 
-  if (selectedAnswer === quiz.correctAnswer) {
-    if (isStampCompleted(quiz.stampId)) {
+  if (
+    selectedAnswer ===
+    quiz.correctAnswer
+  ) {
+    if (
+      isStampCompleted(quiz.stampId)
+    ) {
       quizResult.textContent =
         '正解！このスタンプは獲得済みです。';
 
@@ -382,7 +558,9 @@ const checkAnswer = (selectedAnswer) => {
     quizResult.className =
       'quiz-result is-correct';
 
-    showStampAcquisition(quiz.stampId);
+    showStampAcquisition(
+      quiz.stampId
+    );
 
     return;
   }
@@ -395,140 +573,143 @@ const checkAnswer = (selectedAnswer) => {
 };
 
 /**
- * 3Dモデルの読み込み状態を確認する
- */
-characterModels.forEach((characterModel, index) => {
-  characterModel.addEventListener(
-    'model-loaded',
-    () => {
-      console.log(
-        `3Dキャラクター${index + 1}を読み込みました。`
-      );
-    }
-  );
-
-  characterModel.addEventListener(
-    'model-error',
-    (event) => {
-      console.error(
-        `3Dキャラクター${index + 1}の読み込みに失敗しました。`,
-        event
-      );
-    }
-  );
-});
-
-/**
  * 各認識画像のイベントを登録する
  */
 arTargets.forEach((arTarget) => {
-  const quizId = arTarget.dataset.quizId;
+  const quizId =
+    arTarget.dataset.quizId;
 
-  arTarget.addEventListener('targetFound', () => {
-    console.log(
-      `認識画像を発見しました: ${quizId}`
-    );
+  arTarget.addEventListener(
+    'targetFound',
+    () => {
+      console.log(
+        `認識画像を発見しました: ${quizId}`
+      );
 
-    hideScanGuide();
-    openQuiz(quizId);
-  });
+      /*
+       * 認識中はAR上のさだモンが表示されるため、
+       * 画面固定のさだモンは隠す
+       */
+      hideFollowingCharacter();
 
-  arTarget.addEventListener('targetLost', () => {
-    console.log(
-      `認識画像を見失いました: ${quizId}`
-    );
-
-    if (
-      !quizModal.classList.contains('is-visible') &&
-      !stampModal.classList.contains('is-visible')
-    ) {
-      showScanGuide();
+      hideScanGuide();
+      openQuiz(quizId);
     }
-  });
+  );
+
+  arTarget.addEventListener(
+    'targetLost',
+    () => {
+      console.log(
+        `認識画像を見失いました: ${quizId}`
+      );
+
+      /*
+       * ポスターを見失った後は、
+       * 画面固定のさだモンを表示する
+       */
+      showFollowingCharacter();
+
+      if (
+        !quizModal.classList.contains(
+          'is-visible'
+        ) &&
+        !stampModal.classList.contains(
+          'is-visible'
+        )
+      ) {
+        showScanGuide();
+      }
+    }
+  );
 });
 
 /**
  * クイズの閉じるボタン
  */
-quizCloseButton.addEventListener('click', () => {
-  closeQuiz();
-});
+quizCloseButton.addEventListener(
+  'click',
+  () => {
+    closeQuiz();
+  }
+);
 
 /**
  * スタンプ台紙を開くボタン
  */
-stampBookButton.addEventListener('click', () => {
-  openStampBook();
-});
+stampBookButton.addEventListener(
+  'click',
+  () => {
+    openStampBook();
+  }
+);
 
 /**
  * スタンプ台紙を閉じるボタン
  */
-stampCloseButton.addEventListener('click', () => {
-  closeStampBook();
-});
+stampCloseButton.addEventListener(
+  'click',
+  () => {
+    closeStampBook();
+  }
+);
 
 /**
  * スタンプ台紙の背景部分を押したとき
  */
-stampModal.addEventListener('click', (event) => {
-  if (event.target === stampModal) {
-    closeStampBook();
+stampModal.addEventListener(
+  'click',
+  (event) => {
+    if (event.target === stampModal) {
+      closeStampBook();
+    }
   }
-});
+);
 
 /**
  * Escapeキーを押したとき
  */
-document.addEventListener('keydown', (event) => {
-  if (event.key !== 'Escape') {
-    return;
-  }
+document.addEventListener(
+  'keydown',
+  (event) => {
+    if (event.key !== 'Escape') {
+      return;
+    }
 
-  if (
-    stampModal.classList.contains('is-visible')
-  ) {
-    closeStampBook();
+    if (
+      stampModal.classList.contains(
+        'is-visible'
+      )
+    ) {
+      closeStampBook();
 
-    return;
-  }
+      return;
+    }
 
-  if (
-    quizModal.classList.contains('is-visible')
-  ) {
-    closeQuiz();
+    if (
+      quizModal.classList.contains(
+        'is-visible'
+      )
+    ) {
+      closeQuiz();
+    }
   }
-});
+);
 
 /**
- * ページを開いたときに、
- * 保存済みのスタンプ状態を読み込む
+ * ページを開いたときの初期処理
  */
 updateStampBook();
 showScanGuide();
-
-/*
- * スポット1だけリセットする場合
- *
- * localStorage.removeItem('stamp-spot-1');
- * updateStampBook();
- */
-
-/*
- * スポット2だけリセットする場合
- *
- * localStorage.removeItem('stamp-spot-2');
- * updateStampBook();
- */
+hideFollowingCharacter();
 
 /*
  * すべてのスタンプをリセットする場合
  *
+ * localStorage.clear();
+ * updateStampBook();
  */
-// localStorage.clear();
-// updateStampBook();
-
 
 console.log(
-  '画像認識ガイド付きのMindARスタンプラリーを起動しました。'
+  '追従キャラクター対応のMindARスタンプラリーを起動しました。'
 );
