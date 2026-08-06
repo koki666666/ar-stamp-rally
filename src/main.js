@@ -1,5 +1,38 @@
 import './style.css';
 
+/**
+ * 本番環境ではスマートフォン・タブレットのみ利用可能にする
+ * localhostではPCからも確認可能
+ */
+const isDevelopment =
+  location.hostname === 'localhost' ||
+  location.hostname === '127.0.0.1' ||
+  location.hostname.startsWith('192.168.');
+
+const isMobileOrTablet =
+  /Android|iPhone|iPad|iPod/i.test(
+    navigator.userAgent
+  );
+
+if (!isDevelopment && !isMobileOrTablet) {
+  document.body.innerHTML = `
+    <main class="device-restriction">
+      <div class="device-restriction-card">
+        <h1>スマートフォン・タブレット専用です</h1>
+
+        <p>
+          このARスタンプラリーは、
+          スマートフォンまたはタブレットからご利用ください。
+        </p>
+      </div>
+    </main>
+  `;
+
+  throw new Error(
+    'PCからのアクセスを停止しました。'
+  );
+}
+
 const totalStampCount = 3;
 
 /**

@@ -634,3 +634,55 @@ a-scene {
     font-size: 14px;
   }
 }
+
+/* ===========================
+   PCアクセス制限画面
+=========================== */
+
+.device-restriction {
+  display: grid;
+  place-items: center;
+
+  width: 100%;
+  min-height: 100vh;
+  padding: 24px;
+
+  background: #f5f7fb;
+}
+
+.device-restriction-card {
+  width: min(100%, 560px);
+  padding: 40px;
+
+  border-radius: 24px;
+  background: #ffffff;
+
+  text-align: center;
+
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.12);
+}
+
+.device-restriction-card h1 {
+  margin: 0 0 20px;
+
+  font-size: 28px;
+}
+
+.device-restriction-card p {
+  margin: 0;
+
+  color: #666666;
+
+  font-size: 17px;
+  line-height: 1.8;
+}
+
+@media (max-width: 600px) {
+  .device-restriction-card {
+    padding: 28px 20px;
+  }
+
+  .device-restriction-card h1 {
+    font-size: 23px;
+  }
+}
