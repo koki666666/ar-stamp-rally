@@ -6,13 +6,15 @@ import './style.css';
 
 /**
  * 管理画面API
- *
- * PCのローカル確認用。
- * スマホやVercel本番環境から使う場合は、
- * 後から公開APIのURLへ変更する必要があります。
  */
 const API_URL =
-  'http://localhost/ar-stamp-admin/api/spots.php';
+  'https://m-shokai.jp/ar-stamp-admin/api/spots.php';
+
+/**
+ * 管理画面の公開URL
+ */
+const ADMIN_BASE_URL =
+  'https://m-shokai.jp/ar-stamp-admin';
 
 /**
  * 本番環境ではスマートフォン・タブレットのみ利用可能にする
@@ -285,38 +287,60 @@ const convertAssetUrl = (path) => {
     return '';
   }
 
+  const normalizedPath =
+    path.trim();
+
+  /*
+   * 完全なURLならそのまま使用する
+   */
   if (
-    path.startsWith('http://') ||
-    path.startsWith('https://')
+    normalizedPath.startsWith('http://') ||
+    normalizedPath.startsWith('https://')
   ) {
-    return path;
+    return normalizedPath;
   }
 
   /*
-   * 管理画面のuploadsフォルダにある画像
+   * ./uploads/画像名
    */
   if (
-    path.startsWith('./uploads/')
+    normalizedPath.startsWith('./uploads/')
   ) {
     return (
-      'http://localhost/ar-stamp-admin/' +
-      path.replace('./', '')
-    );
-  }
-
-  if (
-    path.startsWith('/uploads/')
-  ) {
-    return (
-      'http://localhost/ar-stamp-admin' +
-      path
+      `${ADMIN_BASE_URL}/` +
+      normalizedPath.replace('./', '')
     );
   }
 
   /*
-   * AR本体のpublic内にある画像
+   * /uploads/画像名
    */
-  return path;
+  if (
+    normalizedPath.startsWith('/uploads/')
+  ) {
+    return (
+      ADMIN_BASE_URL +
+      normalizedPath
+    );
+  }
+
+  /*
+   * uploads/画像名
+   */
+  if (
+    normalizedPath.startsWith('uploads/')
+  ) {
+    return (
+      `${ADMIN_BASE_URL}/` +
+      normalizedPath
+    );
+  }
+
+  /*
+   * /targets/ と /images/ は
+   * AR本体のpublic内にある画像として使用する
+   */
+  return normalizedPath;
 };
 
 /**
@@ -501,6 +525,7 @@ const getCurrentQuiz = () => {
  */
 const resetQuizResult = () => {
   quizResult.textContent = '';
+
   quizResult.className =
     'quiz-result';
 };
@@ -584,7 +609,8 @@ const openQuiz = (quizId) => {
     return;
   }
 
-  const quiz = quizData[quizId];
+  const quiz =
+    quizData[quizId];
 
   if (!quiz) {
     currentQuizId = null;
@@ -867,7 +893,8 @@ const checkAnswer = (
     return;
   }
 
-  const quiz = getCurrentQuiz();
+  const quiz =
+    getCurrentQuiz();
 
   if (!quiz) {
     console.error(
