@@ -1,343 +1,206 @@
 <!doctype html>
 <html lang="ja">
-  <head>
-    <meta charset="UTF-8" />
+<head>
+  <meta charset="UTF-8" />
 
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0"
-    />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
 
-    <title>ARスタンプラリー</title>
+  <title>ARスタンプラリー</title>
 
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-  </head>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+</head>
 
-  <body>
+<body>
+
+  <!-- ===========================
+       ARシーン
+  ============================ -->
+  <a-scene
+    id="ar-scene"
+    mindar-image="
+      imageTargetSrc: http://localhost/ar-stamp-admin/targets/targets.mind;
+      autoStart: true;
+      maxTrack: 1;
+    "
+    color-space="sRGB"
+    renderer="
+      colorManagement: true;
+      physicallyCorrectLights: true;
+    "
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false"
+  >
     <!-- ===========================
-         AR画面
+         AR内で使用する画像
     ============================ -->
-    <a-scene
-      mindar-image="
-        imageTargetSrc: https://m-shokai.jp/ar-stamp-admin/targets/targets.mind;
-        autoStart: true;
-        maxTrack: 1;
-      "
-      vr-mode-ui="enabled: false"
-      device-orientation-permission-ui="enabled: false"
-      renderer="
-        colorManagement: true;
-        physicallyCorrectLights: true;
-      "
-    >
-      <!-- ===========================
-           画像素材の読み込み
-      ============================ -->
-      <a-assets>
-        <img
-          id="sadamon-image"
-          src="/characters/sadamon_a.png"
-          alt=""
-        />
-      </a-assets>
-
-      <!-- ARカメラ -->
-      <a-camera
-        position="0 0 0"
-        look-controls="enabled: false"
-      ></a-camera>
-
-      <!-- ===========================
-           1枚目の認識画像
-      ============================ -->
-      <a-entity
-        id="ar-target-1"
-        class="ar-target"
-        data-quiz-id="quiz-1"
-        mindar-image-target="targetIndex: 0"
-      >
-        <!-- 位置確認用の青い板 -->
-        <a-plane
-          color="#4b73ff"
-          opacity="0.08"
-          position="0 0 0"
-          width="1"
-          height="0.552"
-        ></a-plane>
-
-        <!-- 1問目の2Dキャラクター -->
-        <a-image
-          id="character-image-1"
-          class="character-image"
-          src="#sadamon-image"
-          position="0 0.17 0.15"
-          width="0.38"
-          height="0.48"
-          transparent="true"
-          material="
-            alphaTest: 0.01;
-            transparent: true;
-            side: double;
-          "
-        ></a-image>
-      </a-entity>
-
-      <!-- ===========================
-           2枚目の認識画像
-      ============================ -->
-      <a-entity
-        id="ar-target-2"
-        class="ar-target"
-        data-quiz-id="quiz-2"
-        mindar-image-target="targetIndex: 1"
-      >
-        <!-- 位置確認用のオレンジ色の板 -->
-        <a-plane
-          color="#ff8a4b"
-          opacity="0.08"
-          position="0 0 0"
-          width="1"
-          height="0.552"
-        ></a-plane>
-
-        <!-- 2問目の2Dキャラクター -->
-        <a-image
-          id="character-image-2"
-          class="character-image"
-          src="#sadamon-image"
-          position="0 0.17 0.15"
-          width="0.38"
-          height="0.48"
-          transparent="true"
-          material="
-            alphaTest: 0.01;
-            transparent: true;
-            side: double;
-          "
-        ></a-image>
-      </a-entity>
-    </a-scene>
-
-    <!-- ===========================
-         ポスター認識後の追従キャラクター
-    ============================ -->
-    <div
-      id="following-character"
-      class="following-character"
-      aria-hidden="true"
-    >
+    <a-assets>
       <img
+        id="sadamon-image"
         src="/characters/sadamon_a.png"
-        alt="さだモン"
+        alt=""
       />
+    </a-assets>
+
+    <!-- ARカメラ -->
+    <a-camera
+      position="0 0 0"
+      look-controls="enabled: false"
+    ></a-camera>
+
+    <!--
+      APIのスポット数に合わせて
+      main.jsからARターゲットを自動生成する
+    -->
+    <a-entity id="ar-target-container"></a-entity>
+  </a-scene>
+
+  <!-- ===========================
+       ポスター認識後の追従キャラクター
+  ============================ -->
+  <div
+    id="following-character"
+    class="following-character"
+    aria-hidden="true"
+  >
+    <img
+      src="/characters/sadamon_a.png"
+      alt="さだモン"
+    />
+  </div>
+
+  <!-- ===========================
+       画像認識ガイド文
+  ============================ -->
+  <div
+    id="scan-guide"
+    class="scan-guide"
+    aria-hidden="false"
+  >
+    <p class="scan-guide-text">
+      この枠の中にポスターを映してください
+    </p>
+  </div>
+
+  <!-- ===========================
+       スタンプ台紙を開くボタン
+  ============================ -->
+  <button
+    id="stamp-book-button"
+    class="stamp-book-button"
+    type="button"
+  >
+    スタンプ
+    <span id="stamp-count">
+      0 / 0
+    </span>
+  </button>
+
+  <!-- ===========================
+       クイズ画面
+  ============================ -->
+  <div
+    id="quiz-modal"
+    class="quiz-modal"
+    aria-hidden="true"
+  >
+    <div class="quiz-card">
+      <div class="speech-triangle"></div>
+
+      <h1 id="quiz-question">
+        問題を読み込んでいます。
+      </h1>
+
+      <div
+        id="quiz-options"
+        class="quiz-options"
+      ></div>
+
+      <p
+        id="quiz-result"
+        class="quiz-result"
+      ></p>
+
+      <button
+        id="quiz-close-button"
+        class="quiz-close-button"
+        type="button"
+      >
+        閉じる
+      </button>
     </div>
+  </div>
 
-    <!-- ===========================
-         画像認識ガイド文
-    ============================ -->
-    <div
-      id="scan-guide"
-      class="scan-guide"
-      aria-hidden="false"
-    >
-      <p class="scan-guide-text">
-        この枠の中にポスターを映してください
-      </p>
-    </div>
+  <!-- ===========================
+       スタンプ台紙画面
+  ============================ -->
+  <div
+    id="stamp-modal"
+    class="stamp-modal"
+    aria-hidden="true"
+  >
+    <div class="stamp-card">
+      <div class="stamp-card-header">
+        <div>
+          <p class="stamp-card-label">
+            ARスタンプラリー
+          </p>
 
-    <!-- ===========================
-         スタンプ台紙を開くボタン
-    ============================ -->
-    <button
-      id="stamp-book-button"
-      class="stamp-book-button"
-      type="button"
-    >
-      スタンプ
-      <span id="stamp-count">0 / 3</span>
-    </button>
-
-    <!-- ===========================
-         クイズ画面
-    ============================ -->
-    <div
-      id="quiz-modal"
-      class="quiz-modal"
-      aria-hidden="true"
-    >
-      <div class="quiz-card">
-        <div class="speech-triangle"></div>
-
-        <h1 id="quiz-question">
-          問題を読み込んでいます。
-        </h1>
-
-        <div
-          id="quiz-options"
-          class="quiz-options"
-        ></div>
-
-        <p
-          id="quiz-result"
-          class="quiz-result"
-        ></p>
+          <h2>
+            スタンプ台紙
+          </h2>
+        </div>
 
         <button
-          id="quiz-close-button"
-          class="quiz-close-button"
+          id="stamp-close-button"
+          class="stamp-close-button"
           type="button"
+          aria-label="スタンプ台紙を閉じる"
         >
-          閉じる
+          ×
         </button>
       </div>
-    </div>
 
-    <!-- ===========================
-         スタンプ台紙画面
-    ============================ -->
-    <div
-      id="stamp-modal"
-      class="stamp-modal"
-      aria-hidden="true"
-    >
-      <div class="stamp-card">
-        <div class="stamp-card-header">
-          <div>
-            <p class="stamp-card-label">
-              ARスタンプラリー
-            </p>
+      <p class="stamp-progress-text">
+        獲得したスタンプ：
 
-            <h2>スタンプ台紙</h2>
-          </div>
+        <strong id="stamp-modal-count">
+          0 / 0
+        </strong>
+      </p>
 
-          <button
-            id="stamp-close-button"
-            class="stamp-close-button"
-            type="button"
-            aria-label="スタンプ台紙を閉じる"
-          >
-            ×
-          </button>
-        </div>
+      <!--
+        APIのスポット数に合わせて
+        main.jsからスタンプ欄を自動生成する
+      -->
+      <div
+        id="stamp-list"
+        class="stamp-list"
+      ></div>
 
-        <p class="stamp-progress-text">
-          獲得したスタンプ：
-          <strong id="stamp-modal-count">
-            0 / 3
-          </strong>
+      <!-- 全スタンプ獲得後に表示 -->
+      <div
+        id="complete-message"
+        class="complete-message"
+      >
+        <p>
+          スタンプラリー達成！
         </p>
 
-        <div class="stamp-list">
-          <!-- スポット1 -->
-          <div
-            class="stamp-item"
-            data-stamp-id="stamp-spot-1"
-          >
-            <div class="stamp-mark">
-              <img
-                class="stamp-image"
-                src="/images/仮画像.png"
-                alt="スポット1のスタンプ"
-              />
-
-              <span class="stamp-placeholder">
-                ？
-              </span>
-            </div>
-
-            <div class="stamp-information">
-              <p class="stamp-number">
-                SPOT 1
-              </p>
-
-              <h3>スポット1</h3>
-
-              <p class="stamp-status">
-                未獲得
-              </p>
-            </div>
-          </div>
-
-          <!-- スポット2 -->
-          <div
-            class="stamp-item"
-            data-stamp-id="stamp-spot-2"
-          >
-            <div class="stamp-mark">
-              <img
-                class="stamp-image"
-                src="/images/仮画像.png"
-                alt="スポット2のスタンプ"
-              />
-
-              <span class="stamp-placeholder">
-                ？
-              </span>
-            </div>
-
-            <div class="stamp-information">
-              <p class="stamp-number">
-                SPOT 2
-              </p>
-
-              <h3>スポット2</h3>
-
-              <p class="stamp-status">
-                未獲得
-              </p>
-            </div>
-          </div>
-
-          <!-- スポット3 -->
-          <div
-            class="stamp-item"
-            data-stamp-id="stamp-spot-3"
-          >
-            <div class="stamp-mark">
-              <img
-                class="stamp-image"
-                src="/images/仮画像.png"
-                alt="スポット3のスタンプ"
-              />
-
-              <span class="stamp-placeholder">
-                ？
-              </span>
-            </div>
-
-            <div class="stamp-information">
-              <p class="stamp-number">
-                SPOT 3
-              </p>
-
-              <h3>スポット3</h3>
-
-              <p class="stamp-status">
-                未獲得
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <!-- 全スタンプ獲得後に表示 -->
-        <div
-          id="complete-message"
-          class="complete-message"
-        >
-          <p>スタンプラリー達成！</p>
-
-          <span>
-            すべてのスタンプを獲得しました。
-          </span>
-        </div>
+        <span>
+          すべてのスタンプを獲得しました。
+        </span>
       </div>
     </div>
+  </div>
 
-    <script
-      type="module"
-      src="/src/main.js"
-    ></script>
-  </body>
+  <script
+    type="module"
+    src="/src/main.js"
+  ></script>
+</body>
 </html>

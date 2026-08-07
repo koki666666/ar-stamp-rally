@@ -5,32 +5,48 @@ import './style.css';
 =========================== */
 
 /**
- * 管理画面API
+ * localhost / ローカルIPなら
+ * ローカルの管理画面を使用する
  */
-const API_URL =
-  'https://m-shokai.jp/ar-stamp-admin/api/spots.php';
-
-/**
- * 管理画面の公開URL
- */
-const ADMIN_BASE_URL =
-  'https://m-shokai.jp/ar-stamp-admin';
-
-/**
- * 本番環境ではスマートフォン・タブレットのみ利用可能にする
- * localhostやローカルIPではPCからも確認可能
- */
-const isDevelopment =
+const isLocal =
   location.hostname === 'localhost' ||
   location.hostname === '127.0.0.1' ||
   location.hostname.startsWith('192.168.');
+
+/**
+ * 管理画面のURL
+ */
+const ADMIN_BASE_URL = isLocal
+  ? 'http://localhost/ar-stamp-admin'
+  : 'https://m-shokai.jp/ar-stamp-admin';
+
+/**
+ * スポット情報API
+ */
+const API_URL =
+  `${ADMIN_BASE_URL}/api/spots.php`;
+
+/**
+ * AR認識データ
+ */
+const TARGETS_MIND_URL =
+  `${ADMIN_BASE_URL}/targets/targets.mind`;
+
+/**
+ * 本番環境では
+ * スマートフォン・タブレットのみ利用可能
+ */
+const isDevelopment = isLocal;
 
 const isMobileOrTablet =
   /Android|iPhone|iPad|iPod/i.test(
     navigator.userAgent
   );
 
-if (!isDevelopment && !isMobileOrTablet) {
+if (
+  !isDevelopment &&
+  !isMobileOrTablet
+) {
   document.body.innerHTML = `
     <main class="device-restriction">
       <div class="device-restriction-card">
@@ -53,26 +69,56 @@ if (!isDevelopment && !isMobileOrTablet) {
 }
 
 /* ===========================
-   基本設定
+   状態管理
 =========================== */
 
-const totalStampCount = 3;
+/**
+ * APIから取得したスポット一覧
+ */
+let spotData = [];
 
 /**
- * APIから取得したクイズ情報を保存する
+ * クイズ情報
  *
- * 例：
  * quizData['quiz-1']
  * quizData['quiz-2']
+ * ...
  */
 const quizData = {};
+
+/**
+ * APIで取得した公開スポット数
+ */
+let totalStampCount = 0;
+
+/**
+ * 現在表示しているクイズ
+ */
+let currentQuizId = null;
+
+/**
+ * 回答済みか
+ */
+let quizAnswered = false;
+
+/**
+ * API読込完了フラグ
+ */
+let apiLoaded = false;
 
 /* ===========================
    HTML要素
 =========================== */
 
-const arTargets =
-  document.querySelectorAll('.ar-target');
+const arScene =
+  document.querySelector(
+    '#ar-scene'
+  );
+
+const arTargetContainer =
+  document.querySelector(
+    '#ar-target-container'
+  );
 
 const followingCharacter =
   document.querySelector(
@@ -80,19 +126,29 @@ const followingCharacter =
   );
 
 const scanGuide =
-  document.querySelector('#scan-guide');
+  document.querySelector(
+    '#scan-guide'
+  );
 
 const quizModal =
-  document.querySelector('#quiz-modal');
+  document.querySelector(
+    '#quiz-modal'
+  );
 
 const quizQuestion =
-  document.querySelector('#quiz-question');
+  document.querySelector(
+    '#quiz-question'
+  );
 
 const quizOptions =
-  document.querySelector('#quiz-options');
+  document.querySelector(
+    '#quiz-options'
+  );
 
 const quizResult =
-  document.querySelector('#quiz-result');
+  document.querySelector(
+    '#quiz-result'
+  );
 
 const quizCloseButton =
   document.querySelector(
@@ -105,7 +161,9 @@ const stampBookButton =
   );
 
 const stampModal =
-  document.querySelector('#stamp-modal');
+  document.querySelector(
+    '#stamp-modal'
+  );
 
 const stampCloseButton =
   document.querySelector(
@@ -113,15 +171,19 @@ const stampCloseButton =
   );
 
 const stampCount =
-  document.querySelector('#stamp-count');
+  document.querySelector(
+    '#stamp-count'
+  );
 
 const stampModalCount =
   document.querySelector(
     '#stamp-modal-count'
   );
 
-const stampItems =
-  document.querySelectorAll('.stamp-item');
+const stampList =
+  document.querySelector(
+    '#stamp-list'
+  );
 
 const completeMessage =
   document.querySelector(
@@ -129,19 +191,44 @@ const completeMessage =
   );
 
 /* ===========================
-   状態管理
+   MindAR認識データURL設定
 =========================== */
 
-let currentQuizId = null;
-let quizAnswered = false;
-let apiLoaded = false;
+/**
+ * HTML側に固定URLを書かず、
+ * JavaScriptから環境に応じて設定する
+ */
+const configureMindAr = () => {
+  if (!arScene) {
+    console.error(
+      'ARシーンが見つかりません。'
+    );
+
+    return;
+  }
+
+  arScene.setAttribute(
+    'mindar-image',
+    `
+      imageTargetSrc: ${TARGETS_MIND_URL};
+      autoStart: true;
+      maxTrack: 1;
+    `
+  );
+
+  console.log(
+    'MindAR認識データ:',
+    TARGETS_MIND_URL
+  );
+};
 
 /* ===========================
    API通信
 =========================== */
 
 /**
- * 管理画面APIからスポット情報を取得する
+ * 管理画面APIから
+ * 公開中のスポット情報を取得する
  */
 const fetchSpots = async () => {
   const response = await fetch(
@@ -158,7 +245,8 @@ const fetchSpots = async () => {
     );
   }
 
-  const data = await response.json();
+  const data =
+    await response.json();
 
   if (!data.success) {
     throw new Error(
@@ -167,7 +255,11 @@ const fetchSpots = async () => {
     );
   }
 
-  if (!Array.isArray(data.spots)) {
+  if (
+    !Array.isArray(
+      data.spots
+    )
+  ) {
     throw new Error(
       'APIのスポット情報が正しい形式ではありません。'
     );
@@ -176,110 +268,192 @@ const fetchSpots = async () => {
   return data.spots;
 };
 
+/* ===========================
+   データ整形
+=========================== */
+
 /**
- * 空の文字列やnullを除外する
+ * 空文字やnullの選択肢を除外する
  */
-const normalizeOptions = (options) => {
-  if (!Array.isArray(options)) {
+const normalizeOptions = (
+  options
+) => {
+  if (
+    !Array.isArray(options)
+  ) {
     return [];
   }
 
-  return options.filter((option) => {
-    return (
-      typeof option === 'string' &&
-      option.trim() !== ''
-    );
-  });
+  return options.filter(
+    (option) => {
+      return (
+        typeof option === 'string' &&
+        option.trim() !== ''
+      );
+    }
+  );
 };
 
 /**
- * APIデータをクイズ設定へ変換する
+ * targetIndex順に並べる
  */
-const createQuizDataFromSpots = (spots) => {
+const sortSpotsByTargetIndex = (
+  spots
+) => {
+  return [...spots].sort(
+    (spotA, spotB) => {
+      return (
+        Number(
+          spotA.targetIndex
+        ) -
+        Number(
+          spotB.targetIndex
+        )
+      );
+    }
+  );
+};
+
+/**
+ * targetIndexが正しいか確認する
+ *
+ * 0,1,2,3...
+ * と連続している必要がある
+ */
+const validateTargetIndexes = (
+  spots
+) => {
+  spots.forEach(
+    (
+      spot,
+      index
+    ) => {
+      const targetIndex =
+        Number(
+          spot.targetIndex
+        );
+
+      if (
+        !Number.isInteger(
+          targetIndex
+        ) ||
+        targetIndex < 0
+      ) {
+        throw new Error(
+          `targetIndexが正しくありません: ${spot.title ?? '名称なし'}`
+        );
+      }
+
+      if (
+        targetIndex !== index
+      ) {
+        throw new Error(
+          `targetIndexが連続していません。期待値: ${index} / 実際: ${targetIndex}`
+        );
+      }
+    }
+  );
+};
+
+/**
+ * APIデータを
+ * クイズ設定へ変換する
+ */
+const createQuizDataFromSpots = (
+  spots
+) => {
   /*
-   * 再読み込み時に以前の情報を消す
+   * 以前の情報を削除
    */
-  Object.keys(quizData).forEach(
+  Object.keys(
+    quizData
+  ).forEach(
     (quizId) => {
-      delete quizData[quizId];
+      delete quizData[
+        quizId
+      ];
     }
   );
 
-  spots.forEach((spot) => {
-    const targetIndex =
-      Number(spot.targetIndex);
+  spots.forEach(
+    (spot) => {
+      const targetIndex =
+        Number(
+          spot.targetIndex
+        );
 
-    if (
-      !Number.isInteger(targetIndex) ||
-      targetIndex < 0
-    ) {
-      console.warn(
-        'targetIndexが正しくありません。',
-        spot
-      );
+      const quizNumber =
+        targetIndex + 1;
 
-      return;
+      const quizId =
+        `quiz-${quizNumber}`;
+
+      const stampId =
+        `stamp-spot-${quizNumber}`;
+
+      const options =
+        normalizeOptions(
+          spot.quiz?.options
+        );
+
+      quizData[
+        quizId
+      ] = {
+        question:
+          spot.quiz
+            ?.question ??
+          '問題が登録されていません。',
+
+        options,
+
+        correctAnswer:
+          spot.quiz
+            ?.correctAnswer ??
+          '',
+
+        stampId,
+
+        spotId:
+          Number(
+            spot.id
+          ),
+
+        title:
+          spot.title ??
+          `スポット${quizNumber}`,
+
+        targetIndex,
+
+        stampName:
+          spot.stamp?.name ??
+          spot.title ??
+          `スポット${quizNumber}`,
+
+        stampImagePath:
+          spot.stamp
+            ?.imagePath ??
+          '',
+      };
     }
-
-    /*
-     * targetIndex: 0 → quiz-1
-     * targetIndex: 1 → quiz-2
-     */
-    const quizNumber =
-      targetIndex + 1;
-
-    const quizId =
-      `quiz-${quizNumber}`;
-
-    const stampId =
-      `stamp-spot-${quizNumber}`;
-
-    const options =
-      normalizeOptions(
-        spot.quiz?.options
-      );
-
-    quizData[quizId] = {
-      question:
-        spot.quiz?.question ??
-        '問題が登録されていません。',
-
-      options,
-
-      correctAnswer:
-        spot.quiz?.correctAnswer ?? '',
-
-      stampId,
-
-      spotId: Number(spot.id),
-
-      title:
-        spot.title ??
-        `スポット${quizNumber}`,
-
-      targetIndex,
-
-      stampName:
-        spot.stamp?.name ??
-        spot.title ??
-        `スポット${quizNumber}`,
-
-      stampImagePath:
-        spot.stamp?.imagePath ?? '',
-    };
-  });
+  );
 
   console.log(
-    'APIデータからクイズ設定を作成しました。',
+    'クイズ設定を作成しました。',
     quizData
   );
 };
 
+/* ===========================
+   画像URL変換
+=========================== */
+
 /**
- * 管理画面側の画像パスを
+ * DBに保存された画像パスを
  * AR画面で使えるURLへ変換する
  */
-const convertAssetUrl = (path) => {
+const convertAssetUrl = (
+  path
+) => {
   if (
     typeof path !== 'string' ||
     path.trim() === ''
@@ -291,32 +465,43 @@ const convertAssetUrl = (path) => {
     path.trim();
 
   /*
-   * 完全なURLならそのまま使用する
+   * 完全URLならそのまま
    */
   if (
-    normalizedPath.startsWith('http://') ||
-    normalizedPath.startsWith('https://')
+    normalizedPath.startsWith(
+      'http://'
+    ) ||
+    normalizedPath.startsWith(
+      'https://'
+    )
   ) {
     return normalizedPath;
   }
 
   /*
-   * ./uploads/画像名
+   * ./uploads/image.png
    */
   if (
-    normalizedPath.startsWith('./uploads/')
+    normalizedPath.startsWith(
+      './uploads/'
+    )
   ) {
     return (
       `${ADMIN_BASE_URL}/` +
-      normalizedPath.replace('./', '')
+      normalizedPath.replace(
+        './',
+        ''
+      )
     );
   }
 
   /*
-   * /uploads/画像名
+   * /uploads/image.png
    */
   if (
-    normalizedPath.startsWith('/uploads/')
+    normalizedPath.startsWith(
+      '/uploads/'
+    )
   ) {
     return (
       ADMIN_BASE_URL +
@@ -325,10 +510,12 @@ const convertAssetUrl = (path) => {
   }
 
   /*
-   * uploads/画像名
+   * uploads/image.png
    */
   if (
-    normalizedPath.startsWith('uploads/')
+    normalizedPath.startsWith(
+      'uploads/'
+    )
   ) {
     return (
       `${ADMIN_BASE_URL}/` +
@@ -337,90 +524,477 @@ const convertAssetUrl = (path) => {
   }
 
   /*
-   * /targets/ と /images/ は
-   * AR本体のpublic内にある画像として使用する
+   * 管理画面側のtargets
+   */
+  if (
+    normalizedPath.startsWith(
+      './targets/'
+    )
+  ) {
+    return (
+      `${ADMIN_BASE_URL}/` +
+      normalizedPath.replace(
+        './',
+        ''
+      )
+    );
+  }
+
+  if (
+    normalizedPath.startsWith(
+      '/targets/'
+    )
+  ) {
+    return (
+      ADMIN_BASE_URL +
+      normalizedPath
+    );
+  }
+
+  if (
+    normalizedPath.startsWith(
+      'targets/'
+    )
+  ) {
+    return (
+      `${ADMIN_BASE_URL}/` +
+      normalizedPath
+    );
+  }
+
+  /*
+   * /images/などは
+   * AR本体のpublicフォルダ
    */
   return normalizedPath;
 };
 
+/* ===========================
+   ARターゲット自動生成
+=========================== */
+
 /**
- * APIのスポット名・スタンプ画像を
- * スタンプ台紙へ反映する
+ * ARターゲットを1件作成する
  */
-const applySpotDataToStampBook = () => {
-  Object.values(quizData).forEach(
-    (quiz) => {
-      const stampItem =
-        document.querySelector(
-          `[data-stamp-id="${quiz.stampId}"]`
+const createArTarget = (
+  spot
+) => {
+  const targetIndex =
+    Number(
+      spot.targetIndex
+    );
+
+  const quizNumber =
+    targetIndex + 1;
+
+  const quizId =
+    `quiz-${quizNumber}`;
+
+  /*
+   * ARターゲット本体
+   */
+  const target =
+    document.createElement(
+      'a-entity'
+    );
+
+  target.id =
+    `ar-target-${quizNumber}`;
+
+  target.classList.add(
+    'ar-target'
+  );
+
+  target.dataset.quizId =
+    quizId;
+
+  target.setAttribute(
+    'mindar-image-target',
+    `targetIndex: ${targetIndex}`
+  );
+
+  /*
+   * 位置確認用の薄い板
+   */
+  const plane =
+    document.createElement(
+      'a-plane'
+    );
+
+  plane.setAttribute(
+    'color',
+    '#4b73ff'
+  );
+
+  plane.setAttribute(
+    'opacity',
+    '0.08'
+  );
+
+  plane.setAttribute(
+    'position',
+    '0 0 0'
+  );
+
+  plane.setAttribute(
+    'width',
+    '1'
+  );
+
+  plane.setAttribute(
+    'height',
+    '0.552'
+  );
+
+  /*
+   * さだモン
+   */
+  const character =
+    document.createElement(
+      'a-image'
+    );
+
+  character.id =
+    `character-image-${quizNumber}`;
+
+  character.classList.add(
+    'character-image'
+  );
+
+  character.setAttribute(
+    'src',
+    '#sadamon-image'
+  );
+
+  character.setAttribute(
+    'position',
+    '0 0.17 0.15'
+  );
+
+  character.setAttribute(
+    'width',
+    '0.38'
+  );
+
+  character.setAttribute(
+    'height',
+    '0.48'
+  );
+
+  character.setAttribute(
+    'transparent',
+    'true'
+  );
+
+  character.setAttribute(
+    'material',
+    `
+      alphaTest: 0.01;
+      transparent: true;
+      side: double;
+    `
+  );
+
+  target.appendChild(
+    plane
+  );
+
+  target.appendChild(
+    character
+  );
+
+  /*
+   * 認識したとき
+   */
+  target.addEventListener(
+    'targetFound',
+    () => {
+      console.log(
+        `認識画像を発見しました: ${quizId}`
+      );
+
+      hideFollowingCharacter();
+      hideScanGuide();
+
+      openQuiz(
+        quizId
+      );
+    }
+  );
+
+  /*
+   * 見失ったとき
+   */
+  target.addEventListener(
+    'targetLost',
+    () => {
+      console.log(
+        `認識画像を見失いました: ${quizId}`
+      );
+
+      showFollowingCharacter();
+
+      if (
+        !quizModal.classList.contains(
+          'is-visible'
+        ) &&
+        !stampModal.classList.contains(
+          'is-visible'
+        )
+      ) {
+        showScanGuide();
+      }
+    }
+  );
+
+  return target;
+};
+
+/**
+ * APIのスポット数だけ
+ * ARターゲットを生成する
+ */
+const createArTargets = (
+  spots
+) => {
+  if (!arTargetContainer) {
+    throw new Error(
+      'ARターゲット生成領域が見つかりません。'
+    );
+  }
+
+  arTargetContainer.innerHTML =
+    '';
+
+  spots.forEach(
+    (spot) => {
+      const target =
+        createArTarget(
+          spot
         );
 
-      if (!stampItem) {
+      arTargetContainer.appendChild(
+        target
+      );
+    }
+  );
+
+  console.log(
+    `${spots.length}件のARターゲットを生成しました。`
+  );
+};
+
+/* ===========================
+   スタンプ台紙自動生成
+=========================== */
+
+/**
+ * スタンプを1件生成する
+ */
+const createStampItem = (
+  quiz,
+  index
+) => {
+  const stampItem =
+    document.createElement(
+      'div'
+    );
+
+  stampItem.className =
+    'stamp-item';
+
+  stampItem.dataset.stampId =
+    quiz.stampId;
+
+  /*
+   * スタンプ画像部分
+   */
+  const stampMark =
+    document.createElement(
+      'div'
+    );
+
+  stampMark.className =
+    'stamp-mark';
+
+  const stampImage =
+    document.createElement(
+      'img'
+    );
+
+  stampImage.className =
+    'stamp-image';
+
+  stampImage.alt =
+    `${quiz.stampName}のスタンプ`;
+
+  /*
+   * DBに画像が登録されていれば使用
+   */
+  if (
+    quiz.stampImagePath
+  ) {
+    stampImage.src =
+      convertAssetUrl(
+        quiz.stampImagePath
+      );
+  } else {
+    stampImage.src =
+      '/images/仮画像.png';
+  }
+
+  const placeholder =
+    document.createElement(
+      'span'
+    );
+
+  placeholder.className =
+    'stamp-placeholder';
+
+  placeholder.textContent =
+    '？';
+
+  stampMark.appendChild(
+    stampImage
+  );
+
+  stampMark.appendChild(
+    placeholder
+  );
+
+  /*
+   * スタンプ情報
+   */
+  const information =
+    document.createElement(
+      'div'
+    );
+
+  information.className =
+    'stamp-information';
+
+  const number =
+    document.createElement(
+      'p'
+    );
+
+  number.className =
+    'stamp-number';
+
+  number.textContent =
+    `SPOT ${index + 1}`;
+
+  const title =
+    document.createElement(
+      'h3'
+    );
+
+  title.textContent =
+    quiz.stampName;
+
+  const status =
+    document.createElement(
+      'p'
+    );
+
+  status.className =
+    'stamp-status';
+
+  status.textContent =
+    '未獲得';
+
+  information.appendChild(
+    number
+  );
+
+  information.appendChild(
+    title
+  );
+
+  information.appendChild(
+    status
+  );
+
+  stampItem.appendChild(
+    stampMark
+  );
+
+  stampItem.appendChild(
+    information
+  );
+
+  return stampItem;
+};
+
+/**
+ * APIのスポット数だけ
+ * スタンプ欄を生成する
+ */
+const createStampBook = (
+  spots
+) => {
+  if (!stampList) {
+    throw new Error(
+      'スタンプ台紙の領域が見つかりません。'
+    );
+  }
+
+  stampList.innerHTML =
+    '';
+
+  totalStampCount =
+    spots.length;
+
+  spots.forEach(
+    (
+      spot,
+      index
+    ) => {
+      const quizNumber =
+        Number(
+          spot.targetIndex
+        ) + 1;
+
+      const quizId =
+        `quiz-${quizNumber}`;
+
+      const quiz =
+        quizData[
+          quizId
+        ];
+
+      if (!quiz) {
         console.warn(
-          `スタンプ欄が見つかりません: ${quiz.stampId}`
+          `スタンプ生成用クイズが見つかりません: ${quizId}`
         );
 
         return;
       }
 
-      const stampTitle =
-        stampItem.querySelector(
-          '.stamp-information h3'
+      const stampItem =
+        createStampItem(
+          quiz,
+          index
         );
 
-      const stampImage =
-        stampItem.querySelector(
-          '.stamp-image'
-        );
-
-      if (stampTitle) {
-        stampTitle.textContent =
-          quiz.stampName;
-      }
-
-      if (
-        stampImage &&
-        quiz.stampImagePath
-      ) {
-        stampImage.src =
-          convertAssetUrl(
-            quiz.stampImagePath
-          );
-
-        stampImage.alt =
-          `${quiz.stampName}のスタンプ`;
-      }
+      stampList.appendChild(
+        stampItem
+      );
     }
   );
-};
 
-/**
- * APIデータを読み込む
- */
-const loadApiData = async () => {
-  apiLoaded = false;
+  /*
+   * 初期表示
+   */
+  stampCount.textContent =
+    `0 / ${totalStampCount}`;
 
-  try {
-    const spots =
-      await fetchSpots();
+  stampModalCount.textContent =
+    `0 / ${totalStampCount}`;
 
-    createQuizDataFromSpots(spots);
-    applySpotDataToStampBook();
-
-    apiLoaded = true;
-
-    console.log(
-      '管理画面APIからスポット情報を読み込みました。',
-      spots
-    );
-  } catch (error) {
-    apiLoaded = false;
-
-    console.error(
-      '管理画面APIとの接続に失敗しました。',
-      error
-    );
-  }
+  console.log(
+    `${totalStampCount}件のスタンプ欄を生成しました。`
+  );
 };
 
 /* ===========================
@@ -428,47 +1002,53 @@ const loadApiData = async () => {
 =========================== */
 
 /**
- * 追従キャラクターを表示する
+ * 追従キャラクターを表示
  */
-const showFollowingCharacter = () => {
-  if (!followingCharacter) {
-    return;
-  }
+const showFollowingCharacter =
+  () => {
+    if (
+      !followingCharacter
+    ) {
+      return;
+    }
 
-  followingCharacter.classList.add(
-    'is-visible'
-  );
+    followingCharacter.classList.add(
+      'is-visible'
+    );
 
-  followingCharacter.setAttribute(
-    'aria-hidden',
-    'false'
-  );
-};
+    followingCharacter.setAttribute(
+      'aria-hidden',
+      'false'
+    );
+  };
 
 /**
- * 追従キャラクターを非表示にする
+ * 追従キャラクターを非表示
  */
-const hideFollowingCharacter = () => {
-  if (!followingCharacter) {
-    return;
-  }
+const hideFollowingCharacter =
+  () => {
+    if (
+      !followingCharacter
+    ) {
+      return;
+    }
 
-  followingCharacter.classList.remove(
-    'is-visible'
-  );
+    followingCharacter.classList.remove(
+      'is-visible'
+    );
 
-  followingCharacter.setAttribute(
-    'aria-hidden',
-    'true'
-  );
-};
+    followingCharacter.setAttribute(
+      'aria-hidden',
+      'true'
+    );
+  };
 
 /* ===========================
    画像認識ガイド
 =========================== */
 
 /**
- * 画像認識ガイドを表示する
+ * ガイド表示
  */
 const showScanGuide = () => {
   if (!scanGuide) {
@@ -486,7 +1066,7 @@ const showScanGuide = () => {
 };
 
 /**
- * 画像認識ガイドを非表示にする
+ * ガイド非表示
  */
 const hideScanGuide = () => {
   if (!scanGuide) {
@@ -502,13 +1082,12 @@ const hideScanGuide = () => {
     'true'
   );
 };
-
 /* ===========================
    クイズ
 =========================== */
 
 /**
- * 現在のクイズ設定を取得する
+ * 現在のクイズ設定を取得
  */
 const getCurrentQuiz = () => {
   if (!currentQuizId) {
@@ -516,27 +1095,35 @@ const getCurrentQuiz = () => {
   }
 
   return (
-    quizData[currentQuizId] ?? null
+    quizData[
+      currentQuizId
+    ] ?? null
   );
 };
 
 /**
- * クイズ結果表示を初期化する
+ * クイズ結果表示を初期化
  */
 const resetQuizResult = () => {
-  quizResult.textContent = '';
+  quizResult.textContent =
+    '';
 
   quizResult.className =
     'quiz-result';
 };
 
 /**
- * クイズ選択肢を生成する
+ * 選択肢を生成
  */
-const createQuizOptions = (quiz) => {
-  quizOptions.innerHTML = '';
+const createQuizOptions = (
+  quiz
+) => {
+  quizOptions.innerHTML =
+    '';
 
-  if (quiz.options.length === 0) {
+  if (
+    quiz.options.length === 0
+  ) {
     quizResult.textContent =
       '選択肢が登録されていません。';
 
@@ -546,42 +1133,51 @@ const createQuizOptions = (quiz) => {
     return;
   }
 
-  quiz.options.forEach((answer) => {
-    const optionButton =
-      document.createElement('button');
+  quiz.options.forEach(
+    (answer) => {
+      const optionButton =
+        document.createElement(
+          'button'
+        );
 
-    optionButton.className =
-      'quiz-option';
+      optionButton.className =
+        'quiz-option';
 
-    optionButton.type = 'button';
+      optionButton.type =
+        'button';
 
-    optionButton.dataset.answer =
-      answer;
+      optionButton.dataset.answer =
+        answer;
 
-    optionButton.textContent =
-      answer;
+      optionButton.textContent =
+        answer;
 
-    optionButton.addEventListener(
-      'click',
-      () => {
-        checkAnswer(answer);
-      }
-    );
+      optionButton.addEventListener(
+        'click',
+        () => {
+          checkAnswer(
+            answer
+          );
+        }
+      );
 
-    quizOptions.appendChild(
-      optionButton
-    );
-  });
+      quizOptions.appendChild(
+        optionButton
+      );
+    }
+  );
 };
 
 /**
- * クイズ画面を表示する
+ * クイズを開く
  */
-const openQuiz = (quizId) => {
+const openQuiz = (
+  quizId
+) => {
   hideScanGuide();
 
   /*
-   * APIがまだ読み込み中の場合
+   * API読込前
    */
   if (!apiLoaded) {
     currentQuizId = null;
@@ -589,7 +1185,8 @@ const openQuiz = (quizId) => {
     quizQuestion.textContent =
       '問題情報を読み込んでいます。';
 
-    quizOptions.innerHTML = '';
+    quizOptions.innerHTML =
+      '';
 
     quizResult.textContent =
       '少し待ってから、もう一度ポスターを映してください。';
@@ -610,7 +1207,9 @@ const openQuiz = (quizId) => {
   }
 
   const quiz =
-    quizData[quizId];
+    quizData[
+      quizId
+    ];
 
   if (!quiz) {
     currentQuizId = null;
@@ -618,7 +1217,8 @@ const openQuiz = (quizId) => {
     quizQuestion.textContent =
       'このポスターに対応する問題がありません。';
 
-    quizOptions.innerHTML = '';
+    quizOptions.innerHTML =
+      '';
 
     quizResult.textContent =
       '管理画面の設定を確認してください。';
@@ -646,19 +1246,26 @@ const openQuiz = (quizId) => {
     quizModal.classList.contains(
       'is-visible'
     ) &&
-    currentQuizId === quizId
+    currentQuizId ===
+      quizId
   ) {
     return;
   }
 
-  currentQuizId = quizId;
-  quizAnswered = false;
+  currentQuizId =
+    quizId;
+
+  quizAnswered =
+    false;
 
   quizQuestion.textContent =
     quiz.question;
 
   resetQuizResult();
-  createQuizOptions(quiz);
+
+  createQuizOptions(
+    quiz
+  );
 
   quizModal.classList.add(
     'is-visible'
@@ -676,7 +1283,7 @@ const openQuiz = (quizId) => {
 };
 
 /**
- * クイズ画面を閉じる
+ * クイズを閉じる
  */
 const closeQuiz = () => {
   quizModal.classList.remove(
@@ -692,7 +1299,7 @@ const closeQuiz = () => {
 };
 
 /**
- * クイズの選択肢を押せない状態にする
+ * 選択肢を押せなくする
  */
 const disableOptions = () => {
   const optionButtons =
@@ -700,9 +1307,12 @@ const disableOptions = () => {
       '.quiz-option'
     );
 
-  optionButtons.forEach((option) => {
-    option.disabled = true;
-  });
+  optionButtons.forEach(
+    (option) => {
+      option.disabled =
+        true;
+    }
+  );
 };
 
 /* ===========================
@@ -744,9 +1354,11 @@ const closeStampBook = () => {
 };
 
 /**
- * スタンプを保存する
+ * スタンプを保存
  */
-const saveStamp = (stampId) => {
+const saveStamp = (
+  stampId
+) => {
   localStorage.setItem(
     stampId,
     'completed'
@@ -756,65 +1368,96 @@ const saveStamp = (stampId) => {
 };
 
 /**
- * 指定したスタンプを取得済みか確認する
+ * 獲得済みか確認
  */
-const isStampCompleted = (stampId) => {
+const isStampCompleted = (
+  stampId
+) => {
   return (
-    localStorage.getItem(stampId) ===
+    localStorage.getItem(
+      stampId
+    ) ===
     'completed'
   );
 };
 
 /**
- * スタンプ台紙の表示を更新する
+ * スタンプ台紙を更新
  */
 const updateStampBook = () => {
-  let completedStampCount = 0;
+  let completedStampCount =
+    0;
 
-  stampItems.forEach((stampItem) => {
-    const stampId =
-      stampItem.dataset.stampId;
+  /*
+   * 動的生成された
+   * 最新のstamp-itemを取得
+   */
+  const stampItems =
+    document.querySelectorAll(
+      '.stamp-item'
+    );
 
-    const stampStatus =
-      stampItem.querySelector(
-        '.stamp-status'
-      );
+  stampItems.forEach(
+    (stampItem) => {
+      const stampId =
+        stampItem.dataset
+          .stampId;
 
-    const completed =
-      isStampCompleted(stampId);
+      const stampStatus =
+        stampItem.querySelector(
+          '.stamp-status'
+        );
 
-    if (completed) {
-      completedStampCount += 1;
+      const completed =
+        isStampCompleted(
+          stampId
+        );
 
-      stampItem.classList.add(
-        'completed'
-      );
+      if (completed) {
+        completedStampCount +=
+          1;
 
-      if (stampStatus) {
-        stampStatus.textContent =
-          '獲得済み';
-      }
-    } else {
-      stampItem.classList.remove(
-        'completed'
-      );
+        stampItem.classList.add(
+          'completed'
+        );
 
-      if (stampStatus) {
-        stampStatus.textContent =
-          '未獲得';
+        if (
+          stampStatus
+        ) {
+          stampStatus.textContent =
+            '獲得済み';
+        }
+      } else {
+        stampItem.classList.remove(
+          'completed'
+        );
+
+        if (
+          stampStatus
+        ) {
+          stampStatus.textContent =
+            '未獲得';
+        }
       }
     }
-  });
+  );
 
-  stampCount.textContent =
-    `${completedStampCount} / ${totalStampCount}`;
-
-  stampModalCount.textContent =
-    `${completedStampCount} / ${totalStampCount}`;
+  if (stampCount) {
+    stampCount.textContent =
+      `${completedStampCount} / ${totalStampCount}`;
+  }
 
   if (
+    stampModalCount
+  ) {
+    stampModalCount.textContent =
+      `${completedStampCount} / ${totalStampCount}`;
+  }
+
+  if (
+    totalStampCount > 0 &&
     completedStampCount ===
-    totalStampCount
+      totalStampCount
   ) {
     completeMessage.classList.add(
       'show'
@@ -826,8 +1469,12 @@ const updateStampBook = () => {
   }
 };
 
+/* ===========================
+   スタンプ押印
+=========================== */
+
 /**
- * スタンプ押印アニメーションを実行する
+ * 押印アニメーション
  */
 const playStampAnimation = (
   stampId
@@ -849,42 +1496,66 @@ const playStampAnimation = (
     'is-stamping'
   );
 
+  /*
+   * アニメーションを
+   * 再実行できるようにする
+   */
   void stampItem.offsetWidth;
 
   stampItem.classList.add(
     'is-stamping'
   );
 
-  window.setTimeout(() => {
-    saveStamp(stampId);
-  }, 650);
+  window.setTimeout(
+    () => {
+      saveStamp(
+        stampId
+      );
+    },
+    650
+  );
 
-  window.setTimeout(() => {
-    stampItem.classList.remove(
-      'is-stamping'
-    );
-  }, 950);
+  window.setTimeout(
+    () => {
+      stampItem.classList.remove(
+        'is-stamping'
+      );
+    },
+    950
+  );
 };
 
 /**
- * 正解後にスタンプ台紙を開き、
- * スタンプ押印演出を実行する
+ * 正解後のスタンプ獲得表示
  */
 const showStampAcquisition = (
   stampId
 ) => {
-  window.setTimeout(() => {
-    closeQuiz();
-    openStampBook();
+  window.setTimeout(
+    () => {
+      closeQuiz();
 
-    window.setTimeout(() => {
-      playStampAnimation(stampId);
-    }, 400);
-  }, 900);
+      openStampBook();
+
+      window.setTimeout(
+        () => {
+          playStampAnimation(
+            stampId
+          );
+        },
+        400
+      );
+    },
+    900
+  );
 };
 
+/* ===========================
+   回答判定
+=========================== */
+
 /**
- * 回答が正解か判定する
+ * 回答を判定
  */
 const checkAnswer = (
   selectedAnswer
@@ -904,7 +1575,8 @@ const checkAnswer = (
     return;
   }
 
-  quizAnswered = true;
+  quizAnswered =
+    true;
 
   disableOptions();
 
@@ -913,7 +1585,9 @@ const checkAnswer = (
     quiz.correctAnswer
   ) {
     if (
-      isStampCompleted(quiz.stampId)
+      isStampCompleted(
+        quiz.stampId
+      )
     ) {
       quizResult.textContent =
         '正解！このスタンプは獲得済みです。';
@@ -945,100 +1619,178 @@ const checkAnswer = (
 };
 
 /* ===========================
-   AR画像認識イベント
+   APIデータ読み込み
 =========================== */
 
-arTargets.forEach((arTarget) => {
-  const quizId =
-    arTarget.dataset.quizId;
+/**
+ * APIデータを取得して、
+ *
+ * ・クイズ
+ * ・ARターゲット
+ * ・スタンプ台紙
+ *
+ * をまとめて生成する
+ */
+const loadApiData = async () => {
+  apiLoaded =
+    false;
 
-  arTarget.addEventListener(
-    'targetFound',
-    () => {
-      console.log(
-        `認識画像を発見しました: ${quizId}`
+  try {
+    const spots =
+      await fetchSpots();
+
+    /*
+     * targetIndex順へ並べる
+     */
+    const sortedSpots =
+      sortSpotsByTargetIndex(
+        spots
       );
 
-      /*
-       * 認識中はAR上のさだモンを表示するため、
-       * 画面固定のさだモンは隠す
-       */
-      hideFollowingCharacter();
+    /*
+     * targetIndexの
+     * 連続性チェック
+     */
+    validateTargetIndexes(
+      sortedSpots
+    );
 
-      hideScanGuide();
-      openQuiz(quizId);
+    spotData =
+      sortedSpots;
+
+    totalStampCount =
+      sortedSpots.length;
+
+    /*
+     * クイズ作成
+     */
+    createQuizDataFromSpots(
+      sortedSpots
+    );
+
+    /*
+     * ARターゲット作成
+     */
+    createArTargets(
+      sortedSpots
+    );
+
+    /*
+     * スタンプ台紙作成
+     */
+    createStampBook(
+      sortedSpots
+    );
+
+    /*
+     * 保存済みスタンプを反映
+     */
+    updateStampBook();
+
+    apiLoaded =
+      true;
+
+    console.log(
+      '管理画面APIからスポット情報を読み込みました。',
+      sortedSpots
+    );
+
+    console.log(
+      `公開スポット数: ${totalStampCount}`
+    );
+  } catch (error) {
+    apiLoaded =
+      false;
+
+    console.error(
+      '管理画面APIとの接続に失敗しました。',
+      error
+    );
+
+    if (
+      stampCount
+    ) {
+      stampCount.textContent =
+        '0 / 0';
+    }
+
+    if (
+      stampModalCount
+    ) {
+      stampModalCount.textContent =
+        '0 / 0';
+    }
+  }
+};
+
+/* ===========================
+   ボタン操作
+=========================== */
+
+if (
+  quizCloseButton
+) {
+  quizCloseButton.addEventListener(
+    'click',
+    () => {
+      closeQuiz();
     }
   );
+}
 
-  arTarget.addEventListener(
-    'targetLost',
+if (
+  stampBookButton
+) {
+  stampBookButton.addEventListener(
+    'click',
     () => {
-      console.log(
-        `認識画像を見失いました: ${quizId}`
-      );
+      openStampBook();
+    }
+  );
+}
 
-      /*
-       * ポスターを見失った後は、
-       * 画面中央固定のさだモンを表示する
-       */
-      showFollowingCharacter();
+if (
+  stampCloseButton
+) {
+  stampCloseButton.addEventListener(
+    'click',
+    () => {
+      closeStampBook();
+    }
+  );
+}
 
+if (
+  stampModal
+) {
+  stampModal.addEventListener(
+    'click',
+    (event) => {
       if (
-        !quizModal.classList.contains(
-          'is-visible'
-        ) &&
-        !stampModal.classList.contains(
-          'is-visible'
-        )
+        event.target ===
+        stampModal
       ) {
-        showScanGuide();
+        closeStampBook();
       }
     }
   );
-});
+}
 
-/* ===========================
-   ボタン・キー操作
-=========================== */
-
-quizCloseButton.addEventListener(
-  'click',
-  () => {
-    closeQuiz();
-  }
-);
-
-stampBookButton.addEventListener(
-  'click',
-  () => {
-    openStampBook();
-  }
-);
-
-stampCloseButton.addEventListener(
-  'click',
-  () => {
-    closeStampBook();
-  }
-);
-
-stampModal.addEventListener(
-  'click',
-  (event) => {
-    if (event.target === stampModal) {
-      closeStampBook();
-    }
-  }
-);
-
+/**
+ * Escapeキー
+ */
 document.addEventListener(
   'keydown',
   (event) => {
-    if (event.key !== 'Escape') {
+    if (
+      event.key !==
+      'Escape'
+    ) {
       return;
     }
 
     if (
+      stampModal &&
       stampModal.classList.contains(
         'is-visible'
       )
@@ -1049,6 +1801,7 @@ document.addEventListener(
     }
 
     if (
+      quizModal &&
       quizModal.classList.contains(
         'is-visible'
       )
@@ -1062,23 +1815,61 @@ document.addEventListener(
    初期処理
 =========================== */
 
-const initializeApp = async () => {
-  updateStampBook();
-  showScanGuide();
-  hideFollowingCharacter();
+const initializeApp =
+  async () => {
+    /*
+     * 最初は0件
+     */
+    totalStampCount =
+      0;
 
-  await loadApiData();
+    if (
+      stampCount
+    ) {
+      stampCount.textContent =
+        '0 / 0';
+    }
 
-  console.log(
-    '管理画面API・追従キャラクター対応のMindARスタンプラリーを起動しました。'
-  );
-};
+    if (
+      stampModalCount
+    ) {
+      stampModalCount.textContent =
+        '0 / 0';
+    }
+
+    showScanGuide();
+
+    hideFollowingCharacter();
+
+    /*
+     * MindARの
+     * targets.mind参照先を設定
+     */
+    configureMindAr();
+
+    /*
+     * API取得
+     */
+    await loadApiData();
+
+    console.log(
+      '動的スポット・動的スタンプ対応のMindARスタンプラリーを起動しました。'
+    );
+  };
 
 initializeApp();
 
+/* ===========================
+   デバッグ用
+=========================== */
+
 /*
- * すべてのスタンプをリセットする場合
+ * 全スタンプをリセットする場合
+ *
+ * ブラウザのConsoleで
  *
  * localStorage.clear();
- * updateStampBook();
+ * location.reload();
+ *
+ * を実行してください。
  */
