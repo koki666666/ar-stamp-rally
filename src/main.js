@@ -30,7 +30,7 @@ const API_URL =
  * AR認識データ
  */
 const TARGETS_MIND_URL =
-  `${ADMIN_BASE_URL}/targets/targets.mind`;
+  `${ADMIN_BASE_URL}/targets/targets.mind?v=${Date.now()}`;
 
 /**
  * デフォルト2Dキャラクター画像
