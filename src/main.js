@@ -33,10 +33,17 @@ const TARGETS_MIND_URL =
   `${ADMIN_BASE_URL}/targets/targets.mind`;
 
 /**
+ * デフォルト2Dキャラクター画像
+ */
+const DEFAULT_CHARACTER_IMAGE =
+  '/characters/ayu_main.png';
+
+/**
  * 本番環境では
  * スマートフォン・タブレットのみ利用可能
  */
-const isDevelopment = isLocal;
+const isDevelopment =
+  isLocal;
 
 const isMobileOrTablet =
   /Android|iPhone|iPad|iPod/i.test(
@@ -79,10 +86,6 @@ let spotData = [];
 
 /**
  * クイズ情報
- *
- * quizData['quiz-1']
- * quizData['quiz-2']
- * ...
  */
 const quizData = {};
 
@@ -105,6 +108,13 @@ let quizAnswered = false;
  * API読込完了フラグ
  */
 let apiLoaded = false;
+
+/**
+ * 現在認識中・最後に認識した
+ * 2Dキャラクター画像URL
+ */
+let currentCharacterImageUrl =
+  DEFAULT_CHARACTER_IMAGE;
 
 /* ===========================
    HTML要素
@@ -194,10 +204,6 @@ const completeMessage =
    MindAR認識データURL設定
 =========================== */
 
-/**
- * HTML側に固定URLを書かず、
- * JavaScriptから環境に応じて設定する
- */
 const configureMindAr = () => {
   if (!arScene) {
     console.error(
@@ -228,58 +234,62 @@ const configureMindAr = () => {
 
 /**
  * 管理画面APIから
- * 公開中のスポット情報を取得する
+ * 公開中のスポット情報を取得
  */
-const fetchSpots = async () => {
-  const response = await fetch(
-    API_URL,
-    {
-      method: 'GET',
-      cache: 'no-store',
+const fetchSpots =
+  async () => {
+    const response =
+      await fetch(
+        API_URL,
+        {
+          method: 'GET',
+          cache: 'no-store',
+        }
+      );
+
+    if (!response.ok) {
+      throw new Error(
+        `APIの取得に失敗しました: ${response.status}`
+      );
     }
-  );
 
-  if (!response.ok) {
-    throw new Error(
-      `APIの取得に失敗しました: ${response.status}`
-    );
-  }
+    const data =
+      await response.json();
 
-  const data =
-    await response.json();
-
-  if (!data.success) {
-    throw new Error(
-      data.message ??
+    if (!data.success) {
+      throw new Error(
+        data.message ??
         'スポット情報を取得できませんでした。'
-    );
-  }
+      );
+    }
 
-  if (
-    !Array.isArray(
-      data.spots
-    )
-  ) {
-    throw new Error(
-      'APIのスポット情報が正しい形式ではありません。'
-    );
-  }
+    if (
+      !Array.isArray(
+        data.spots
+      )
+    ) {
+      throw new Error(
+        'APIのスポット情報が正しい形式ではありません。'
+      );
+    }
 
-  return data.spots;
-};
+    return data.spots;
+  };
 
 /* ===========================
    データ整形
 =========================== */
 
 /**
- * 空文字やnullの選択肢を除外する
+ * 空文字やnullの選択肢を除外
  */
 const normalizeOptions = (
   options
 ) => {
   if (
-    !Array.isArray(options)
+    !Array.isArray(
+      options
+    )
   ) {
     return [];
   }
@@ -301,7 +311,10 @@ const sortSpotsByTargetIndex = (
   spots
 ) => {
   return [...spots].sort(
-    (spotA, spotB) => {
+    (
+      spotA,
+      spotB
+    ) => {
       return (
         Number(
           spotA.targetIndex
@@ -315,7 +328,7 @@ const sortSpotsByTargetIndex = (
 };
 
 /**
- * targetIndexが正しいか確認する
+ * targetIndex確認
  *
  * 0,1,2,3...
  * と連続している必要がある
@@ -345,7 +358,8 @@ const validateTargetIndexes = (
       }
 
       if (
-        targetIndex !== index
+        targetIndex !==
+        index
       ) {
         throw new Error(
           `targetIndexが連続していません。期待値: ${index} / 実際: ${targetIndex}`
@@ -357,14 +371,11 @@ const validateTargetIndexes = (
 
 /**
  * APIデータを
- * クイズ設定へ変換する
+ * クイズ設定へ変換
  */
 const createQuizDataFromSpots = (
   spots
 ) => {
-  /*
-   * 以前の情報を削除
-   */
   Object.keys(
     quizData
   ).forEach(
@@ -424,6 +435,10 @@ const createQuizDataFromSpots = (
 
         targetIndex,
 
+        characterImagePath:
+          spot.characterImagePath ??
+          '',
+
         stampName:
           spot.stamp?.name ??
           spot.title ??
@@ -448,8 +463,8 @@ const createQuizDataFromSpots = (
 =========================== */
 
 /**
- * DBに保存された画像パスを
- * AR画面で使えるURLへ変換する
+ * DBの画像パスを
+ * AR画面で使用できるURLへ変換
  */
 const convertAssetUrl = (
   path
@@ -465,7 +480,7 @@ const convertAssetUrl = (
     path.trim();
 
   /*
-   * 完全URLならそのまま
+   * 完全URL
    */
   if (
     normalizedPath.startsWith(
@@ -524,7 +539,7 @@ const convertAssetUrl = (
   }
 
   /*
-   * 管理画面側のtargets
+   * ./targets/
    */
   if (
     normalizedPath.startsWith(
@@ -540,6 +555,9 @@ const convertAssetUrl = (
     );
   }
 
+  /*
+   * /targets/
+   */
   if (
     normalizedPath.startsWith(
       '/targets/'
@@ -551,6 +569,9 @@ const convertAssetUrl = (
     );
   }
 
+  /*
+   * targets/
+   */
   if (
     normalizedPath.startsWith(
       'targets/'
@@ -563,10 +584,238 @@ const convertAssetUrl = (
   }
 
   /*
-   * /images/などは
-   * AR本体のpublicフォルダ
+   * /images/
+   * /characters/
+   * などはAR本体
    */
   return normalizedPath;
+};
+
+/* ===========================
+   2Dキャラクター
+=========================== */
+
+/**
+ * スポットの
+ * 2DキャラクターURL取得
+ */
+const getCharacterImageUrl = (
+  spot
+) => {
+  const convertedUrl =
+    convertAssetUrl(
+      spot.characterImagePath
+    );
+
+  if (convertedUrl) {
+    return convertedUrl;
+  }
+
+  return DEFAULT_CHARACTER_IMAGE;
+};
+
+/**
+ * <a-assets>を取得
+ *
+ * HTML側になければ
+ * JavaScriptで自動作成
+ */
+const getOrCreateAssetsContainer =
+  () => {
+    if (!arScene) {
+      return null;
+    }
+
+    let assets =
+      arScene.querySelector(
+        'a-assets'
+      );
+
+    if (assets) {
+      return assets;
+    }
+
+    assets =
+      document.createElement(
+        'a-assets'
+      );
+
+    /*
+     * 読み込みで
+     * シーン全体が長時間停止しないようにする
+     */
+    assets.setAttribute(
+      'timeout',
+      '10000'
+    );
+
+    /*
+     * シーンの先頭へ追加
+     */
+    arScene.insertBefore(
+      assets,
+      arScene.firstChild
+    );
+
+    return assets;
+  };
+
+/**
+ * キャラクター画像を
+ * A-Frameのa-assetsへ登録
+ *
+ * 戻り値：
+ * #character-asset-1
+ * のようなセレクタ
+ */
+const registerCharacterAsset =
+  (
+    spot
+  ) => {
+    const targetIndex =
+      Number(
+        spot.targetIndex
+      );
+
+    const quizNumber =
+      targetIndex + 1;
+
+    const assetId =
+      `character-asset-${quizNumber}`;
+
+    /*
+     * 既に登録済みなら
+     * そのまま使う
+     */
+    const existingAsset =
+      document.getElementById(
+        assetId
+      );
+
+    if (existingAsset) {
+      return `#${assetId}`;
+    }
+
+    const assets =
+      getOrCreateAssetsContainer();
+
+    if (!assets) {
+      console.error(
+        'a-assetsを作成できませんでした。'
+      );
+
+      return '';
+    }
+
+    const imageUrl =
+      getCharacterImageUrl(
+        spot
+      );
+
+    const image =
+      document.createElement(
+        'img'
+      );
+
+    image.id =
+      assetId;
+
+    /*
+     * WebGLテクスチャとして
+     * クロスオリジン画像を使うため
+     */
+    image.crossOrigin =
+      'anonymous';
+
+    image.setAttribute(
+      'crossorigin',
+      'anonymous'
+    );
+
+    /*
+     * 読み込み完了ログ
+     */
+    image.addEventListener(
+      'load',
+      () => {
+        console.log(
+          `2Dキャラクター画像を読み込みました: ${assetId}`,
+          imageUrl
+        );
+      }
+    );
+
+    /*
+     * 読み込み失敗ログ
+     */
+    image.addEventListener(
+      'error',
+      () => {
+        console.error(
+          `2Dキャラクター画像の読み込みに失敗しました: ${assetId}`,
+          imageUrl
+        );
+      }
+    );
+
+    image.src =
+      imageUrl;
+
+    assets.appendChild(
+      image
+    );
+
+    return `#${assetId}`;
+  };
+
+/**
+ * 公開スポットすべての
+ * キャラクターをa-assetsへ登録
+ */
+const registerCharacterAssets = (
+  spots
+) => {
+  spots.forEach(
+    (spot) => {
+      registerCharacterAsset(
+        spot
+      );
+    }
+  );
+
+  console.log(
+    `${spots.length}件の2Dキャラクターアセットを登録しました。`
+  );
+};
+
+/**
+ * 追従キャラクターの
+ * 画像変更
+ *
+ * こちらは普通のHTML imgなので
+ * URLを直接指定してOK
+ */
+const updateFollowingCharacterImage = (
+  imageUrl
+) => {
+  if (
+    !followingCharacter
+  ) {
+    return;
+  }
+
+  const image =
+    followingCharacter.querySelector(
+      'img'
+    );
+
+  if (!image) {
+    return;
+  }
+
+  image.src =
+    imageUrl ||
+    DEFAULT_CHARACTER_IMAGE;
 };
 
 /* ===========================
@@ -574,7 +823,7 @@ const convertAssetUrl = (
 =========================== */
 
 /**
- * ARターゲットを1件作成する
+ * ARターゲットを1件作成
  */
 const createArTarget = (
   spot
@@ -590,8 +839,30 @@ const createArTarget = (
   const quizId =
     `quiz-${quizNumber}`;
 
+  /**
+   * 普通のHTML用URL
+   *
+   * ポスターから離れた後の
+   * 追従キャラクターに使用
+   */
+  const characterImageUrl =
+    getCharacterImageUrl(
+      spot
+    );
+
+  /**
+   * A-Frame用
+   *
+   * #character-asset-1
+   * のようなID参照
+   */
+  const characterAssetSelector =
+    registerCharacterAsset(
+      spot
+    );
+
   /*
-   * ARターゲット本体
+   * ARターゲット
    */
   const target =
     document.createElement(
@@ -614,7 +885,7 @@ const createArTarget = (
   );
 
   /*
-   * 位置確認用の薄い板
+   * 位置確認用
    */
   const plane =
     document.createElement(
@@ -647,7 +918,8 @@ const createArTarget = (
   );
 
   /*
-   * さだモン
+   * スポットごとの
+   * 2Dキャラクター
    */
   const character =
     document.createElement(
@@ -661,10 +933,18 @@ const createArTarget = (
     'character-image'
   );
 
-  character.setAttribute(
-    'src',
-    '#sadamon-image'
-  );
+  /*
+   * ★重要
+   *
+   * URLを直接指定せず、
+   * a-assetsに登録した画像を参照する
+   */
+  if (characterAssetSelector) {
+    character.setAttribute(
+      'src',
+      characterAssetSelector
+    );
+  }
 
   character.setAttribute(
     'position',
@@ -713,7 +993,15 @@ const createArTarget = (
         `認識画像を発見しました: ${quizId}`
       );
 
+      currentCharacterImageUrl =
+        characterImageUrl;
+
+      updateFollowingCharacterImage(
+        currentCharacterImageUrl
+      );
+
       hideFollowingCharacter();
+
       hideScanGuide();
 
       openQuiz(
@@ -730,6 +1018,10 @@ const createArTarget = (
     () => {
       console.log(
         `認識画像を見失いました: ${quizId}`
+      );
+
+      updateFollowingCharacterImage(
+        characterImageUrl
       );
 
       showFollowingCharacter();
@@ -752,7 +1044,7 @@ const createArTarget = (
 
 /**
  * APIのスポット数だけ
- * ARターゲットを生成する
+ * ARターゲット生成
  */
 const createArTargets = (
   spots
@@ -789,7 +1081,7 @@ const createArTargets = (
 =========================== */
 
 /**
- * スタンプを1件生成する
+ * スタンプを1件生成
  */
 const createStampItem = (
   quiz,
@@ -807,7 +1099,7 @@ const createStampItem = (
     quiz.stampId;
 
   /*
-   * スタンプ画像部分
+   * スタンプ画像
    */
   const stampMark =
     document.createElement(
@@ -828,9 +1120,6 @@ const createStampItem = (
   stampImage.alt =
     `${quiz.stampName}のスタンプ`;
 
-  /*
-   * DBに画像が登録されていれば使用
-   */
   if (
     quiz.stampImagePath
   ) {
@@ -928,7 +1217,7 @@ const createStampItem = (
 
 /**
  * APIのスポット数だけ
- * スタンプ欄を生成する
+ * スタンプ欄を生成
  */
 const createStampBook = (
   spots
@@ -983,9 +1272,6 @@ const createStampBook = (
     }
   );
 
-  /*
-   * 初期表示
-   */
   stampCount.textContent =
     `0 / ${totalStampCount}`;
 
@@ -1001,9 +1287,6 @@ const createStampBook = (
    追従キャラクター
 =========================== */
 
-/**
- * 追従キャラクターを表示
- */
 const showFollowingCharacter =
   () => {
     if (
@@ -1011,6 +1294,10 @@ const showFollowingCharacter =
     ) {
       return;
     }
+
+    updateFollowingCharacterImage(
+      currentCharacterImageUrl
+    );
 
     followingCharacter.classList.add(
       'is-visible'
@@ -1022,9 +1309,6 @@ const showFollowingCharacter =
     );
   };
 
-/**
- * 追従キャラクターを非表示
- */
 const hideFollowingCharacter =
   () => {
     if (
@@ -1047,42 +1331,38 @@ const hideFollowingCharacter =
    画像認識ガイド
 =========================== */
 
-/**
- * ガイド表示
- */
-const showScanGuide = () => {
-  if (!scanGuide) {
-    return;
-  }
+const showScanGuide =
+  () => {
+    if (!scanGuide) {
+      return;
+    }
 
-  scanGuide.classList.remove(
-    'is-hidden'
-  );
+    scanGuide.classList.remove(
+      'is-hidden'
+    );
 
-  scanGuide.setAttribute(
-    'aria-hidden',
-    'false'
-  );
-};
+    scanGuide.setAttribute(
+      'aria-hidden',
+      'false'
+    );
+  };
 
-/**
- * ガイド非表示
- */
-const hideScanGuide = () => {
-  if (!scanGuide) {
-    return;
-  }
+const hideScanGuide =
+  () => {
+    if (!scanGuide) {
+      return;
+    }
 
-  scanGuide.classList.add(
-    'is-hidden'
-  );
+    scanGuide.classList.add(
+      'is-hidden'
+    );
 
-  scanGuide.setAttribute(
-    'aria-hidden',
-    'true'
-  );
-};
-/* ===========================
+    scanGuide.setAttribute(
+      'aria-hidden',
+      'true'
+    );
+  };
+  /* ===========================
    クイズ
 =========================== */
 
@@ -1176,11 +1456,9 @@ const openQuiz = (
 ) => {
   hideScanGuide();
 
-  /*
-   * API読込前
-   */
   if (!apiLoaded) {
-    currentQuizId = null;
+    currentQuizId =
+      null;
 
     quizQuestion.textContent =
       '問題情報を読み込んでいます。';
@@ -1212,7 +1490,8 @@ const openQuiz = (
     ];
 
   if (!quiz) {
-    currentQuizId = null;
+    currentQuizId =
+      null;
 
     quizQuestion.textContent =
       'このポスターに対応する問題がありません。';
@@ -1388,10 +1667,6 @@ const updateStampBook = () => {
   let completedStampCount =
     0;
 
-  /*
-   * 動的生成された
-   * 最新のstamp-itemを取得
-   */
   const stampItems =
     document.querySelectorAll(
       '.stamp-item'
@@ -1496,10 +1771,6 @@ const playStampAnimation = (
     'is-stamping'
   );
 
-  /*
-   * アニメーションを
-   * 再実行できるようにする
-   */
   void stampItem.offsetWidth;
 
   stampItem.classList.add(
@@ -1623,13 +1894,14 @@ const checkAnswer = (
 =========================== */
 
 /**
- * APIデータを取得して、
+ * APIデータを取得して
  *
  * ・クイズ
+ * ・キャラクターアセット
  * ・ARターゲット
  * ・スタンプ台紙
  *
- * をまとめて生成する
+ * を生成
  */
 const loadApiData = async () => {
   apiLoaded =
@@ -1639,18 +1911,11 @@ const loadApiData = async () => {
     const spots =
       await fetchSpots();
 
-    /*
-     * targetIndex順へ並べる
-     */
     const sortedSpots =
       sortSpotsByTargetIndex(
         spots
       );
 
-    /*
-     * targetIndexの
-     * 連続性チェック
-     */
     validateTargetIndexes(
       sortedSpots
     );
@@ -1662,9 +1927,17 @@ const loadApiData = async () => {
       sortedSpots.length;
 
     /*
-     * クイズ作成
+     * クイズ情報作成
      */
     createQuizDataFromSpots(
+      sortedSpots
+    );
+
+    /*
+     * まずキャラクター画像を
+     * a-assetsへ登録
+     */
+    registerCharacterAssets(
       sortedSpots
     );
 
@@ -1683,7 +1956,7 @@ const loadApiData = async () => {
     );
 
     /*
-     * 保存済みスタンプを反映
+     * 保存済みスタンプ反映
      */
     updateStampBook();
 
@@ -1698,7 +1971,22 @@ const loadApiData = async () => {
     console.log(
       `公開スポット数: ${totalStampCount}`
     );
-  } catch (error) {
+
+    /*
+     * キャラクター確認
+     */
+    sortedSpots.forEach(
+      (spot) => {
+        console.log(
+          `キャラクター設定 targetIndex=${spot.targetIndex}:`,
+          spot.characterImagePath ??
+          'デフォルト画像'
+        );
+      }
+    );
+  } catch (
+    error
+  ) {
     apiLoaded =
       false;
 
@@ -1817,11 +2105,11 @@ document.addEventListener(
 
 const initializeApp =
   async () => {
-    /*
-     * 最初は0件
-     */
     totalStampCount =
       0;
+
+    currentCharacterImageUrl =
+      DEFAULT_CHARACTER_IMAGE;
 
     if (
       stampCount
@@ -1837,23 +2125,29 @@ const initializeApp =
         '0 / 0';
     }
 
+    /*
+     * 初期追従キャラ
+     */
+    updateFollowingCharacterImage(
+      DEFAULT_CHARACTER_IMAGE
+    );
+
     showScanGuide();
 
     hideFollowingCharacter();
 
     /*
-     * MindARの
-     * targets.mind参照先を設定
+     * MindAR設定
      */
     configureMindAr();
 
     /*
-     * API取得
+     * API取得・画面生成
      */
     await loadApiData();
 
     console.log(
-      '動的スポット・動的スタンプ対応のMindARスタンプラリーを起動しました。'
+      'A-Frameアセット対応・スポット別2Dキャラクター対応のMindARスタンプラリーを起動しました。'
     );
   };
 
@@ -1866,10 +2160,10 @@ initializeApp();
 /*
  * 全スタンプをリセットする場合
  *
- * ブラウザのConsoleで
+ * Consoleで
  *
  * localStorage.clear();
  * location.reload();
  *
- * を実行してください。
+ * を実行
  */
