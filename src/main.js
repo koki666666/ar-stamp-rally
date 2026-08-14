@@ -953,12 +953,12 @@ const createArTarget = (
 
   character.setAttribute(
     'width',
-    '0.38'
+    '0.5'
   );
 
   character.setAttribute(
     'height',
-    '0.48'
+    '0.7'
   );
 
   character.setAttribute(
