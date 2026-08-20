@@ -1,4 +1,5 @@
 import './style.css';
+import './transfer.js';
 
 /* ===========================
    環境設定
@@ -25,6 +26,24 @@ const ADMIN_BASE_URL = isLocal
  */
 const API_URL =
   `${ADMIN_BASE_URL}/api/spots.php`;
+
+/**
+ * スタンプ進捗保存API
+ */
+const PROGRESS_API_URL =
+  `${ADMIN_BASE_URL}/api/save-progress.php`;
+
+/**
+ * スタンプ進捗取得API
+ */
+const GET_PROGRESS_API_URL =
+  `${ADMIN_BASE_URL}/api/get-progress.php`;
+
+/**
+ * 参加者IDを保存するLocalStorageキー
+ */
+const PARTICIPANT_KEY_STORAGE_KEY =
+  'ar-stamp-participant-key';
 
 /**
  * AR認識データ
@@ -115,6 +134,74 @@ let apiLoaded = false;
  */
 let currentCharacterImageUrl =
   DEFAULT_CHARACTER_IMAGE;
+
+/**
+ * このブラウザの参加者ID
+ */
+let participantKey = '';
+
+/* ===========================
+   参加者ID
+=========================== */
+
+/**
+ * UUID形式の参加者IDを生成する
+ */
+const createParticipantKey = () => {
+  if (
+    window.crypto &&
+    typeof window.crypto.randomUUID === 'function'
+  ) {
+    return window.crypto.randomUUID();
+  }
+
+  return (
+    'participant-' +
+    Date.now().toString(36) +
+    '-' +
+    Math.random()
+      .toString(36)
+      .slice(2) +
+    '-' +
+    Math.random()
+      .toString(36)
+      .slice(2)
+  );
+};
+
+/**
+ * LocalStorageから参加者IDを取得する。
+ * 未発行なら新規発行して保存する。
+ */
+const getOrCreateParticipantKey = () => {
+  try {
+    const savedParticipantKey =
+      localStorage.getItem(
+        PARTICIPANT_KEY_STORAGE_KEY
+      );
+
+    if (savedParticipantKey) {
+      return savedParticipantKey;
+    }
+
+    const newParticipantKey =
+      createParticipantKey();
+
+    localStorage.setItem(
+      PARTICIPANT_KEY_STORAGE_KEY,
+      newParticipantKey
+    );
+
+    return newParticipantKey;
+  } catch (error) {
+    console.warn(
+      '参加者IDをLocalStorageへ保存できませんでした。',
+      error
+    );
+
+    return createParticipantKey();
+  }
+};
 
 /* ===========================
    HTML要素
@@ -274,6 +361,262 @@ const fetchSpots =
     }
 
     return data.spots;
+  };
+
+/**
+ * スタンプ進捗をサーバーへ保存する
+ */
+const saveProgressToServer =
+  async (posterId) => {
+    if (
+      !participantKey ||
+      !Number.isInteger(
+        Number(posterId)
+      ) ||
+      Number(posterId) <= 0
+    ) {
+      console.warn(
+        '進捗保存に必要な情報が不足しています。',
+        {
+          participantKey,
+          posterId,
+        }
+      );
+
+      return false;
+    }
+
+    const response =
+      await fetch(
+        PROGRESS_API_URL,
+        {
+          method: 'POST',
+
+          headers: {
+            'Content-Type':
+              'application/json',
+          },
+
+          body: JSON.stringify({
+            participantKey,
+
+            posterId:
+              Number(posterId),
+          }),
+        }
+      );
+
+    const data =
+      await response.json();
+
+    if (
+      !response.ok ||
+      !data.success
+    ) {
+      throw new Error(
+        data.message ??
+        `進捗保存に失敗しました: ${response.status}`
+      );
+    }
+
+    console.log(
+      'スタンプ進捗をDBへ保存しました。',
+      {
+        participantKey,
+
+        posterId:
+          Number(posterId),
+
+        saved:
+          data.saved,
+      }
+    );
+
+    return true;
+  };
+
+/**
+ * DBから参加者のスタンプ進捗を取得する
+ */
+const fetchProgressFromServer =
+  async () => {
+    if (!participantKey) {
+      console.warn(
+        '進捗取得に必要な参加者IDがありません。'
+      );
+
+      return [];
+    }
+
+    const progressUrl =
+      new URL(
+        GET_PROGRESS_API_URL
+      );
+
+    progressUrl.searchParams.set(
+      'participantKey',
+      participantKey
+    );
+
+    const response =
+      await fetch(
+        progressUrl.toString(),
+        {
+          method: 'GET',
+          cache: 'no-store',
+        }
+      );
+
+    const data =
+      await response.json();
+
+    if (
+      !response.ok ||
+      !data.success
+    ) {
+      throw new Error(
+        data.message ??
+        `進捗取得に失敗しました: ${response.status}`
+      );
+    }
+
+    if (
+      !Array.isArray(
+        data.posterIds
+      )
+    ) {
+      throw new Error(
+        '進捗取得APIのposterIdsが正しい形式ではありません。'
+      );
+    }
+
+    return data.posterIds.map(
+      (posterId) =>
+        Number(posterId)
+    );
+  };
+
+/**
+ * DBから取得した進捗を
+ * LocalStorageへ復元する
+ *
+ * LocalStorage側にしかない進捗は消さず、
+ * DB側の進捗を追加する形で統合する。
+ */
+const restoreServerProgressToLocal =
+  async () => {
+    try {
+      const posterIds =
+        await fetchProgressFromServer();
+
+      if (posterIds.length === 0) {
+        console.log(
+          'DB側に保存済みのスタンプ進捗はありません。'
+        );
+
+        return true;
+      }
+
+      const quizzes =
+        Object.values(
+          quizData
+        );
+
+      posterIds.forEach(
+        (posterId) => {
+          const quiz =
+            quizzes.find(
+              (item) => {
+                return (
+                  Number(
+                    item?.spotId
+                  ) ===
+                  Number(
+                    posterId
+                  )
+                );
+              }
+            );
+
+          if (
+            !quiz ||
+            !quiz.stampId
+          ) {
+            console.warn(
+              `DB進捗に対応するスタンプが見つかりません: posterId=${posterId}`
+            );
+
+            return;
+          }
+
+          localStorage.setItem(
+            quiz.stampId,
+            'completed'
+          );
+        }
+      );
+
+      updateStampBook();
+
+      console.log(
+        'DBのスタンプ進捗を端末へ復元しました。',
+        posterIds
+      );
+
+      return true;
+    } catch (error) {
+      /*
+       * DBからの取得に失敗しても
+       * LocalStorageの進捗で利用を継続する
+       */
+      console.warn(
+        'DBからのスタンプ進捗取得に失敗しました。LocalStorageの進捗を使用します。',
+        error
+      );
+
+      return false;
+    }
+  };
+
+/**
+ * LocalStorageに残っている既存スタンプを
+ * DBへ同期する
+ */
+const syncLocalProgressToServer =
+  async () => {
+    const quizzes =
+      Object.values(
+        quizData
+      );
+
+    for (const quiz of quizzes) {
+      if (
+        !quiz ||
+        !quiz.stampId ||
+        !quiz.spotId
+      ) {
+        continue;
+      }
+
+      if (
+        !isStampCompleted(
+          quiz.stampId
+        )
+      ) {
+        continue;
+      }
+
+      try {
+        await saveProgressToServer(
+          quiz.spotId
+        );
+      } catch (error) {
+        console.warn(
+          `既存スタンプのDB同期に失敗しました: ${quiz.stampId}`,
+          error
+        );
+      }
+    }
   };
 
 /* ===========================
@@ -479,9 +822,6 @@ const convertAssetUrl = (
   const normalizedPath =
     path.trim();
 
-  /*
-   * 完全URL
-   */
   if (
     normalizedPath.startsWith(
       'http://'
@@ -493,9 +833,6 @@ const convertAssetUrl = (
     return normalizedPath;
   }
 
-  /*
-   * ./uploads/image.png
-   */
   if (
     normalizedPath.startsWith(
       './uploads/'
@@ -510,9 +847,6 @@ const convertAssetUrl = (
     );
   }
 
-  /*
-   * /uploads/image.png
-   */
   if (
     normalizedPath.startsWith(
       '/uploads/'
@@ -524,9 +858,6 @@ const convertAssetUrl = (
     );
   }
 
-  /*
-   * uploads/image.png
-   */
   if (
     normalizedPath.startsWith(
       'uploads/'
@@ -538,9 +869,6 @@ const convertAssetUrl = (
     );
   }
 
-  /*
-   * ./targets/
-   */
   if (
     normalizedPath.startsWith(
       './targets/'
@@ -555,9 +883,6 @@ const convertAssetUrl = (
     );
   }
 
-  /*
-   * /targets/
-   */
   if (
     normalizedPath.startsWith(
       '/targets/'
@@ -569,9 +894,6 @@ const convertAssetUrl = (
     );
   }
 
-  /*
-   * targets/
-   */
   if (
     normalizedPath.startsWith(
       'targets/'
@@ -583,11 +905,6 @@ const convertAssetUrl = (
     );
   }
 
-  /*
-   * /images/
-   * /characters/
-   * などはAR本体
-   */
   return normalizedPath;
 };
 
@@ -595,10 +912,6 @@ const convertAssetUrl = (
    2Dキャラクター
 =========================== */
 
-/**
- * スポットの
- * 2DキャラクターURL取得
- */
 const getCharacterImageUrl = (
   spot
 ) => {
@@ -614,12 +927,6 @@ const getCharacterImageUrl = (
   return DEFAULT_CHARACTER_IMAGE;
 };
 
-/**
- * <a-assets>を取得
- *
- * HTML側になければ
- * JavaScriptで自動作成
- */
 const getOrCreateAssetsContainer =
   () => {
     if (!arScene) {
@@ -640,18 +947,11 @@ const getOrCreateAssetsContainer =
         'a-assets'
       );
 
-    /*
-     * 読み込みで
-     * シーン全体が長時間停止しないようにする
-     */
     assets.setAttribute(
       'timeout',
       '10000'
     );
 
-    /*
-     * シーンの先頭へ追加
-     */
     arScene.insertBefore(
       assets,
       arScene.firstChild
@@ -660,14 +960,6 @@ const getOrCreateAssetsContainer =
     return assets;
   };
 
-/**
- * キャラクター画像を
- * A-Frameのa-assetsへ登録
- *
- * 戻り値：
- * #character-asset-1
- * のようなセレクタ
- */
 const registerCharacterAsset =
   (
     spot
@@ -683,10 +975,6 @@ const registerCharacterAsset =
     const assetId =
       `character-asset-${quizNumber}`;
 
-    /*
-     * 既に登録済みなら
-     * そのまま使う
-     */
     const existingAsset =
       document.getElementById(
         assetId
@@ -720,10 +1008,6 @@ const registerCharacterAsset =
     image.id =
       assetId;
 
-    /*
-     * WebGLテクスチャとして
-     * クロスオリジン画像を使うため
-     */
     image.crossOrigin =
       'anonymous';
 
@@ -732,9 +1016,6 @@ const registerCharacterAsset =
       'anonymous'
     );
 
-    /*
-     * 読み込み完了ログ
-     */
     image.addEventListener(
       'load',
       () => {
@@ -745,9 +1026,6 @@ const registerCharacterAsset =
       }
     );
 
-    /*
-     * 読み込み失敗ログ
-     */
     image.addEventListener(
       'error',
       () => {
@@ -768,10 +1046,6 @@ const registerCharacterAsset =
     return `#${assetId}`;
   };
 
-/**
- * 公開スポットすべての
- * キャラクターをa-assetsへ登録
- */
 const registerCharacterAssets = (
   spots
 ) => {
@@ -788,13 +1062,6 @@ const registerCharacterAssets = (
   );
 };
 
-/**
- * 追従キャラクターの
- * 画像変更
- *
- * こちらは普通のHTML imgなので
- * URLを直接指定してOK
- */
 const updateFollowingCharacterImage = (
   imageUrl
 ) => {
@@ -822,9 +1089,6 @@ const updateFollowingCharacterImage = (
    ARターゲット自動生成
 =========================== */
 
-/**
- * ARターゲットを1件作成
- */
 const createArTarget = (
   spot
 ) => {
@@ -839,31 +1103,16 @@ const createArTarget = (
   const quizId =
     `quiz-${quizNumber}`;
 
-  /**
-   * 普通のHTML用URL
-   *
-   * ポスターから離れた後の
-   * 追従キャラクターに使用
-   */
   const characterImageUrl =
     getCharacterImageUrl(
       spot
     );
 
-  /**
-   * A-Frame用
-   *
-   * #character-asset-1
-   * のようなID参照
-   */
   const characterAssetSelector =
     registerCharacterAsset(
       spot
     );
 
-  /*
-   * ARターゲット
-   */
   const target =
     document.createElement(
       'a-entity'
@@ -884,9 +1133,6 @@ const createArTarget = (
     `targetIndex: ${targetIndex}`
   );
 
-  /*
-   * 位置確認用
-   */
   const plane =
     document.createElement(
       'a-plane'
@@ -917,10 +1163,6 @@ const createArTarget = (
     '0.552'
   );
 
-  /*
-   * スポットごとの
-   * 2Dキャラクター
-   */
   const character =
     document.createElement(
       'a-image'
@@ -933,12 +1175,6 @@ const createArTarget = (
     'character-image'
   );
 
-  /*
-   * ★重要
-   *
-   * URLを直接指定せず、
-   * a-assetsに登録した画像を参照する
-   */
   if (characterAssetSelector) {
     character.setAttribute(
       'src',
@@ -983,9 +1219,6 @@ const createArTarget = (
     character
   );
 
-  /*
-   * 認識したとき
-   */
   target.addEventListener(
     'targetFound',
     () => {
@@ -1010,9 +1243,6 @@ const createArTarget = (
     }
   );
 
-  /*
-   * 見失ったとき
-   */
   target.addEventListener(
     'targetLost',
     () => {
@@ -1042,10 +1272,6 @@ const createArTarget = (
   return target;
 };
 
-/**
- * APIのスポット数だけ
- * ARターゲット生成
- */
 const createArTargets = (
   spots
 ) => {
@@ -1080,9 +1306,6 @@ const createArTargets = (
    スタンプ台紙自動生成
 =========================== */
 
-/**
- * スタンプを1件生成
- */
 const createStampItem = (
   quiz,
   index
@@ -1098,9 +1321,6 @@ const createStampItem = (
   stampItem.dataset.stampId =
     quiz.stampId;
 
-  /*
-   * スタンプ画像
-   */
   const stampMark =
     document.createElement(
       'div'
@@ -1151,9 +1371,6 @@ const createStampItem = (
     placeholder
   );
 
-  /*
-   * スタンプ情報
-   */
   const information =
     document.createElement(
       'div'
@@ -1215,10 +1432,6 @@ const createStampItem = (
   return stampItem;
 };
 
-/**
- * APIのスポット数だけ
- * スタンプ欄を生成
- */
 const createStampBook = (
   spots
 ) => {
@@ -1362,13 +1575,11 @@ const hideScanGuide =
       'true'
     );
   };
-  /* ===========================
+
+/* ===========================
    クイズ
 =========================== */
 
-/**
- * 現在のクイズ設定を取得
- */
 const getCurrentQuiz = () => {
   if (!currentQuizId) {
     return null;
@@ -1381,9 +1592,6 @@ const getCurrentQuiz = () => {
   );
 };
 
-/**
- * クイズ結果表示を初期化
- */
 const resetQuizResult = () => {
   quizResult.textContent =
     '';
@@ -1392,9 +1600,6 @@ const resetQuizResult = () => {
     'quiz-result';
 };
 
-/**
- * 選択肢を生成
- */
 const createQuizOptions = (
   quiz
 ) => {
@@ -1448,9 +1653,6 @@ const createQuizOptions = (
   );
 };
 
-/**
- * クイズを開く
- */
 const openQuiz = (
   quizId
 ) => {
@@ -1561,9 +1763,6 @@ const openQuiz = (
   );
 };
 
-/**
- * クイズを閉じる
- */
 const closeQuiz = () => {
   quizModal.classList.remove(
     'is-visible'
@@ -1577,9 +1776,6 @@ const closeQuiz = () => {
   showScanGuide();
 };
 
-/**
- * 選択肢を押せなくする
- */
 const disableOptions = () => {
   const optionButtons =
     quizOptions.querySelectorAll(
@@ -1598,9 +1794,6 @@ const disableOptions = () => {
    スタンプ台紙
 =========================== */
 
-/**
- * スタンプ台紙を開く
- */
 const openStampBook = () => {
   updateStampBook();
 
@@ -1616,9 +1809,6 @@ const openStampBook = () => {
   );
 };
 
-/**
- * スタンプ台紙を閉じる
- */
 const closeStampBook = () => {
   stampModal.classList.remove(
     'is-visible'
@@ -1632,11 +1822,9 @@ const closeStampBook = () => {
   showScanGuide();
 };
 
-/**
- * スタンプを保存
- */
 const saveStamp = (
-  stampId
+  stampId,
+  posterId
 ) => {
   localStorage.setItem(
     stampId,
@@ -1644,11 +1832,19 @@ const saveStamp = (
   );
 
   updateStampBook();
+
+  saveProgressToServer(
+    posterId
+  ).catch(
+    (error) => {
+      console.error(
+        'スタンプ進捗のDB保存に失敗しました。',
+        error
+      );
+    }
+  );
 };
 
-/**
- * 獲得済みか確認
- */
 const isStampCompleted = (
   stampId
 ) => {
@@ -1660,9 +1856,6 @@ const isStampCompleted = (
   );
 };
 
-/**
- * スタンプ台紙を更新
- */
 const updateStampBook = () => {
   let completedStampCount =
     0;
@@ -1748,11 +1941,9 @@ const updateStampBook = () => {
    スタンプ押印
 =========================== */
 
-/**
- * 押印アニメーション
- */
 const playStampAnimation = (
-  stampId
+  stampId,
+  posterId
 ) => {
   const stampItem =
     document.querySelector(
@@ -1780,7 +1971,8 @@ const playStampAnimation = (
   window.setTimeout(
     () => {
       saveStamp(
-        stampId
+        stampId,
+        posterId
       );
     },
     650
@@ -1796,11 +1988,9 @@ const playStampAnimation = (
   );
 };
 
-/**
- * 正解後のスタンプ獲得表示
- */
 const showStampAcquisition = (
-  stampId
+  stampId,
+  posterId
 ) => {
   window.setTimeout(
     () => {
@@ -1811,7 +2001,8 @@ const showStampAcquisition = (
       window.setTimeout(
         () => {
           playStampAnimation(
-            stampId
+            stampId,
+            posterId
           );
         },
         400
@@ -1825,9 +2016,6 @@ const showStampAcquisition = (
    回答判定
 =========================== */
 
-/**
- * 回答を判定
- */
 const checkAnswer = (
   selectedAnswer
 ) => {
@@ -1866,6 +2054,17 @@ const checkAnswer = (
       quizResult.className =
         'quiz-result is-correct';
 
+      saveProgressToServer(
+        quiz.spotId
+      ).catch(
+        (error) => {
+          console.warn(
+            '獲得済みスタンプのDB同期に失敗しました。',
+            error
+          );
+        }
+      );
+
       return;
     }
 
@@ -1876,7 +2075,8 @@ const checkAnswer = (
       'quiz-result is-correct';
 
     showStampAcquisition(
-      quiz.stampId
+      quiz.stampId,
+      quiz.spotId
     );
 
     return;
@@ -1893,16 +2093,6 @@ const checkAnswer = (
    APIデータ読み込み
 =========================== */
 
-/**
- * APIデータを取得して
- *
- * ・クイズ
- * ・キャラクターアセット
- * ・ARターゲット
- * ・スタンプ台紙
- *
- * を生成
- */
 const loadApiData = async () => {
   apiLoaded =
     false;
@@ -1926,37 +2116,44 @@ const loadApiData = async () => {
     totalStampCount =
       sortedSpots.length;
 
-    /*
-     * クイズ情報作成
-     */
     createQuizDataFromSpots(
       sortedSpots
     );
 
-    /*
-     * まずキャラクター画像を
-     * a-assetsへ登録
-     */
     registerCharacterAssets(
       sortedSpots
     );
 
-    /*
-     * ARターゲット作成
-     */
     createArTargets(
       sortedSpots
     );
 
-    /*
-     * スタンプ台紙作成
-     */
     createStampBook(
       sortedSpots
     );
 
     /*
-     * 保存済みスタンプ反映
+     * LocalStorageの進捗をまず表示
+     */
+    updateStampBook();
+
+    /*
+     * DBの進捗を取得
+     * ↓
+     * LocalStorageに復元
+     * ↓
+     * スタンプ帳へ反映
+     */
+    await restoreServerProgressToLocal();
+
+    /*
+     * LocalStorageにしか存在しない進捗は
+     * DB側へ送信
+     */
+    await syncLocalProgressToServer();
+
+    /*
+     * 最終状態
      */
     updateStampBook();
 
@@ -1972,9 +2169,6 @@ const loadApiData = async () => {
       `公開スポット数: ${totalStampCount}`
     );
 
-    /*
-     * キャラクター確認
-     */
     sortedSpots.forEach(
       (spot) => {
         console.log(
@@ -2064,9 +2258,6 @@ if (
   );
 }
 
-/**
- * Escapeキー
- */
 document.addEventListener(
   'keydown',
   (event) => {
@@ -2105,6 +2296,14 @@ document.addEventListener(
 
 const initializeApp =
   async () => {
+    participantKey =
+      getOrCreateParticipantKey();
+
+    console.log(
+      '参加者ID:',
+      participantKey
+    );
+
     totalStampCount =
       0;
 
@@ -2125,9 +2324,6 @@ const initializeApp =
         '0 / 0';
     }
 
-    /*
-     * 初期追従キャラ
-     */
     updateFollowingCharacterImage(
       DEFAULT_CHARACTER_IMAGE
     );
@@ -2136,18 +2332,12 @@ const initializeApp =
 
     hideFollowingCharacter();
 
-    /*
-     * MindAR設定
-     */
     configureMindAr();
 
-    /*
-     * API取得・画面生成
-     */
     await loadApiData();
 
     console.log(
-      'A-Frameアセット対応・スポット別2Dキャラクター対応のMindARスタンプラリーを起動しました。'
+      'DB進捗保存・復元対応のMindARスタンプラリーを起動しました。'
     );
   };
 
@@ -2158,12 +2348,18 @@ initializeApp();
 =========================== */
 
 /*
- * 全スタンプをリセットする場合
- *
- * Consoleで
+ * 注意：
  *
  * localStorage.clear();
- * location.reload();
  *
- * を実行
+ * を実行すると、
+ * スタンプだけでなく participantKey も消えます。
+ *
+ * つまり次回アクセス時に
+ * 「別の参加者」として新しいIDが作られます。
+ *
+ * participantKeyを残したまま
+ * スタンプだけ消したい場合は、
+ * stamp-spot- で始まるLocalStorageキーだけを
+ * 削除してください。
  */
