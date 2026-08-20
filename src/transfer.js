@@ -34,7 +34,7 @@ const addTransferStyles = () => {
   style.textContent = `
     .transfer-button {
       position: fixed;
-      top: 90px;
+      top: 20px;
       left: 20px;
       z-index: 10000;
 
